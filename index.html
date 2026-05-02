@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#ffffff" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="1日の予定" />
+  <title>1日の予定</title>
+  <style>
+    :root {
+      --bg: #f1f5f9;
+      --card: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --line: #e2e8f0;
+      --soft: #f8fafc;
+      --dark: #0f172a;
+      --danger: #e11d48;
+      --blue: #1e3a8a;
+      --green: #059669;
+      --amber: #d97706;
+      --bottom-safe: env(safe-area-inset-bottom, 0px);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif; }
+    body { overscroll-behavior-y: none; }
+    button, input, select { font: inherit; }
+    button { cursor: pointer; border: 0; background: none; -webkit-tap-highlight-color: transparent; }
+
+    .app { max-width: 430px; min-height: 100vh; margin: 0 auto; background: #fff; box-shadow: 0 20px 60px rgba(15, 23, 42, .18); position: relative; }
+    .header { position: sticky; top: 0; z-index: 20; background: rgba(255, 255, 255, .96); backdrop-filter: blur(12px); border-bottom: 1px solid var(--line); padding: 10px 14px; }
+    .header-row { display: flex; align-items: center; justify-content: space-between; }
+    .icon-btn { width: 40px; height: 40px; border-radius: 999px; color: var(--text); font-size: 24px; display: grid; place-items: center; }
+    .title { text-align: center; line-height: 1.2; }
+    .title h1 { margin: 0; font-size: 16px; font-weight: 900; letter-spacing: -.02em; }
+    .title p { margin: 3px 0 0; font-size: 11px; color: var(--muted); font-weight: 700; }
+
+    main { padding: 16px 14px calc(104px + var(--bottom-safe)); }
+    .screen { display: none; }
+    .screen.active { display: block; }
+    .stack { display: grid; gap: 14px; }
+    .card { background: var(--card); border: 1px solid #f1f5f9; border-radius: 26px; padding: 16px; box-shadow: 0 8px 25px rgba(15, 23, 42, .05); }
+    .small-card { background: var(--soft); border-radius: 18px; padding: 12px; }
+    .section-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+    .section-head h2 { margin: 0; font-size: 20px; font-weight: 900; letter-spacing: -.03em; }
+    .section-head p, .hint { margin: 4px 0 0; color: var(--muted); font-size: 13px; line-height: 1.55; }
+    .label { display: block; font-size: 13px; font-weight: 900; margin-bottom: 7px; }
+    .input, .select { width: 100%; border: 1px solid var(--line); border-radius: 18px; background: #fff; padding: 13px 14px; outline: none; font-weight: 800; color: var(--text); min-height: 48px; }
+    .input:focus, .select:focus { border-color: #94a3b8; box-shadow: 0 0 0 3px rgba(148, 163, 184, .18); }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .grid-5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+    .row { display: flex; gap: 8px; align-items: center; }
+    .row > .grow { flex: 1; min-width: 0; }
+
+    .btn { border-radius: 18px; padding: 14px 12px; font-size: 14px; font-weight: 900; text-align: center; min-height: 48px; }
+    .btn-dark { background: var(--dark); color: #fff; box-shadow: 0 12px 24px rgba(15, 23, 42, .16); }
+    .btn-outline { border: 1px solid var(--line); color: #334155; background: #fff; }
+    .btn-blue { background: var(--blue); color: #fff; }
+    .btn-danger { background: var(--danger); color: #fff; }
+    .btn-soft-danger { border: 1px solid #fecdd3; color: var(--danger); background: #fff1f2; }
+    .btn-muted { color: #94a3b8; font-size: 12px; font-weight: 900; padding: 8px 10px; border-radius: 999px; }
+    .btn-armed { background: var(--danger); color: #fff; }
+
+    .mode-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; background: #f1f5f9; border-radius: 18px; padding: 4px; }
+    .mode-tabs button { border-radius: 14px; padding: 12px 8px; color: #64748b; font-size: 14px; font-weight: 900; }
+    .mode-tabs button.active { background: var(--dark); color: #fff; }
+
+    .chart-wrap { display: grid; justify-items: center; }
+    .clock-svg { width: 100%; max-width: 382px; display: block; filter: drop-shadow(0 4px 8px rgba(15, 23, 42, .06)); }
+    .clock-mini { width: 82px; height: 82px; }
+    .stats { margin-top: 10px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; }
+    .stat { background: var(--soft); border-radius: 17px; padding: 11px 6px; }
+    .stat span { display: block; color: var(--muted); font-size: 11px; font-weight: 700; }
+    .stat strong { display: block; margin-top: 3px; font-size: 17px; font-weight: 900; }
+    .state-ok { color: var(--green); }
+    .state-warn { color: var(--amber); }
+    .state-bad { color: var(--danger); }
+    .alert { border-radius: 18px; background: #fff1f2; color: #be123c; padding: 12px 14px; font-size: 13px; font-weight: 800; line-height: 1.5; margin-top: 10px; }
+
+    .item-list { display: grid; gap: 8px; }
+    .item-row { display: flex; align-items: center; gap: 10px; background: var(--soft); border: 1px solid #f1f5f9; border-radius: 18px; padding: 10px; }
+    .dot { width: 16px; height: 16px; border-radius: 999px; flex: 0 0 auto; }
+    .item-body { flex: 1; min-width: 0; }
+    .item-body strong { display: block; font-weight: 900; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .item-body span { color: var(--muted); font-size: 12px; font-weight: 800; }
+    .empty { background: var(--soft); border-radius: 18px; padding: 14px; color: var(--muted); font-size: 13px; line-height: 1.6; }
+
+    .cat-buttons { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .cat-btn { border-radius: 17px; padding: 12px 8px; min-height: 46px; font-size: 13px; font-weight: 900; box-shadow: 0 4px 12px rgba(15, 23, 42, .07); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .cat-btn.selected { outline: 3px solid #0f172a; outline-offset: 2px; }
+    .color-input { width: 58px; height: 50px; padding: 4px; border-radius: 18px; border: 1px solid var(--line); background: #fff; flex: 0 0 auto; }
+
+    .template-card, .history-card { border: 1px solid #f1f5f9; background: #fff; border-radius: 24px; padding: 14px; box-shadow: 0 8px 22px rgba(15, 23, 42, .05); }
+    .template-main, .history-main { display: flex; gap: 13px; align-items: center; }
+    .template-info, .history-info { min-width: 0; flex: 1; }
+    .template-info strong, .history-info strong { display: block; font-size: 15px; font-weight: 900; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    .template-info p, .history-info p { margin: 3px 0 0; color: var(--muted); font-size: 13px; line-height: 1.45; }
+    .template-info small, .history-info small { display: block; margin-top: 6px; color: #334155; font-size: 12px; font-weight: 900; }
+    .card-actions { margin-top: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+    .danger-box { background: #fff1f2; border: 1px solid #fecdd3; border-radius: 24px; padding: 15px; }
+    .danger-box h3 { margin: 0; color: #be123c; font-size: 16px; font-weight: 900; }
+    .danger-box p { margin: 7px 0 0; color: #e11d48; font-size: 13px; line-height: 1.6; }
+
+    .nav { position: fixed; left: 50%; bottom: 0; transform: translateX(-50%); z-index: 30; width: 100%; max-width: 430px; display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px; border-top: 1px solid var(--line); background: rgba(255,255,255,.96); backdrop-filter: blur(12px); padding: 7px 6px calc(8px + var(--bottom-safe)); }
+    .nav button { border-radius: 16px; padding: 6px 2px; font-size: 10px; font-weight: 900; color: #94a3b8; line-height: 1.15; }
+    .nav button .nav-icon { display: block; font-size: 18px; margin-bottom: 2px; }
+    .nav button.active { color: var(--text); }
+
+    .toast { position: fixed; left: 50%; top: 64px; transform: translateX(-50%); z-index: 50; width: min(370px, 86vw); background: #0f172a; color: #fff; border-radius: 18px; padding: 12px 14px; text-align: center; font-size: 13px; font-weight: 900; box-shadow: 0 16px 38px rgba(15, 23, 42, .25); display: none; }
+    .toast.show { display: block; animation: toastIn .18s ease-out; }
+    @keyframes toastIn { from { opacity: 0; transform: translate(-50%, -8px); } to { opacity: 1; transform: translate(-50%, 0); } }
+
+    .file-input { display: none; }
+    .mt { margin-top: 14px; }
+    .mb { margin-bottom: 14px; }
+    .muted { color: var(--muted); }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <div class="header-row">
+        <button class="icon-btn" id="backBtn" aria-label="戻る">‹</button>
+        <div class="title">
+          <h1>1日の予定</h1>
+          <p>24時間を円グラフで可視化</p>
+        </div>
+        <button class="icon-btn" data-screen="template" aria-label="テンプレート">☰</button>
+      </div>
+    </header>
+
+    <div class="toast" id="toast"></div>
+
+    <main>
+      <section id="screen-today" class="screen active">
+        <div class="stack">
+          <div class="stack" style="gap:10px;">
+            <input id="planTitle" class="input" placeholder="予定名" />
+            <input id="planDate" type="date" class="input" />
+          </div>
+
+          <div class="card">
+            <div class="chart-wrap" id="chartWrap"></div>
+            <div class="stats">
+              <div class="stat"><span>合計</span><strong id="totalText">0:00</strong></div>
+              <div class="stat"><span>残り</span><strong id="remainingText">24:00</strong></div>
+              <div class="stat"><span>状態</span><strong id="statusText" class="state-warn">調整中</strong></div>
+            </div>
+            <div id="overlapAlert" class="alert" style="display:none;">時間が重なっている予定があります。</div>
+          </div>
+
+          <div class="grid-2">
+            <button class="btn btn-dark" data-screen="add">＋ 予定を追加</button>
+            <button class="btn btn-outline" id="saveImageBtn">画像保存</button>
+            <button class="btn btn-outline" id="saveHistoryBtn">履歴保存</button>
+            <button class="btn btn-outline" id="saveTemplateBtn">テンプレ化</button>
+          </div>
+
+          <div class="card">
+            <div class="section-head" style="margin-bottom:10px; align-items:center;">
+              <h2 style="font-size:16px;">予定一覧</h2>
+              <button id="clearAllBtn" class="btn-muted">全削除</button>
+            </div>
+            <div id="itemList" class="item-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="screen-add" class="screen">
+        <div class="stack">
+          <div class="card">
+            <div class="mode-tabs">
+              <button id="modeRange" class="active">時間で入力</button>
+              <button id="modeDuration">合計時間で入力</button>
+            </div>
+
+            <div class="stack mt">
+              <label>
+                <span class="label">カテゴリ（自由入力OK）</span>
+                <div class="row">
+                  <input id="categoryInput" class="input grow" placeholder="例：歯医者、買い物、デート" />
+                  <input id="categoryColor" type="color" class="color-input" aria-label="カテゴリ色" />
+                </div>
+                <p class="hint">未登録カテゴリは追加時に自動保存されます。</p>
+              </label>
+
+              <div class="grid-2">
+                <label>
+                  <span class="label">開始時刻</span>
+                  <input id="startInput" type="time" class="input" />
+                </label>
+                <label id="endBlock">
+                  <span class="label">終了時刻</span>
+                  <input id="endInput" type="time" class="input" />
+                </label>
+                <div id="durationBlock" style="display:none;">
+                  <span class="label">合計時間</span>
+                  <div class="grid-2">
+                    <input id="hourInput" type="number" min="0" max="24" class="input" />
+                    <select id="minuteInput" class="select">
+                      <option value="0">0分</option>
+                      <option value="15">15分</option>
+                      <option value="30">30分</option>
+                      <option value="45">45分</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <span class="label">よく使うカテゴリ</span>
+                <div id="catButtons" class="cat-buttons"></div>
+              </div>
+
+              <button id="addItemBtn" class="btn btn-dark">追加する</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="screen-template" class="screen">
+        <div class="stack">
+          <div class="section-head">
+            <div>
+              <h2>テンプレート</h2>
+              <p>反映・編集・上書きができます</p>
+            </div>
+            <button id="saveTemplateBtn2" class="btn btn-dark" style="padding:12px 14px; min-height:44px;">＋保存</button>
+          </div>
+          <div id="templateList" class="stack"></div>
+        </div>
+      </section>
+
+      <section id="screen-history" class="screen">
+        <div class="stack">
+          <div class="section-head">
+            <div>
+              <h2>履歴</h2>
+              <p>同じ日に複数パターン作った時も残せます</p>
+            </div>
+          </div>
+          <div id="historyList" class="stack"></div>
+        </div>
+      </section>
+
+      <section id="screen-templateEdit" class="screen">
+        <div class="stack">
+          <div class="section-head">
+            <div>
+              <h2>テンプレート編集</h2>
+              <p>名前変更・今日の予定で上書き・削除ができます</p>
+            </div>
+          </div>
+
+          <div class="card">
+            <div id="editTemplateChart" class="chart-wrap mb"></div>
+            <label>
+              <span class="label">テンプレート名</span>
+              <input id="templateNameInput" class="input" />
+            </label>
+            <label class="mt" style="display:block;">
+              <span class="label">メモ</span>
+              <input id="templateMemoInput" class="input" />
+            </label>
+            <button id="saveTemplateInfoBtn" class="btn btn-dark mt" style="width:100%;">名前・メモを保存</button>
+          </div>
+
+          <div class="card">
+            <h3 style="margin:0; font-size:16px; font-weight:900;">予定内容を変える</h3>
+            <p class="hint">一度「今日の予定へ読み込み」して、予定追加・削除で整えてから、この画面に戻って上書きすると変更できます。</p>
+            <div class="stack mt" style="gap:8px;">
+              <button id="loadTemplateForEditBtn" class="btn btn-outline">今日の予定へ読み込み</button>
+              <button id="overwriteTemplateBtn" class="btn btn-blue">今日の予定でこのテンプレを上書き</button>
+            </div>
+          </div>
+
+          <div class="danger-box">
+            <h3>削除</h3>
+            <p>不要になったテンプレートを消せます。</p>
+            <button id="deleteTemplateBtn" class="btn btn-danger mt" style="width:100%;">このテンプレートを削除</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="screen-settings" class="screen">
+        <div class="stack">
+          <div class="section-head">
+            <div>
+              <h2>設定</h2>
+              <p>データ保存とバックアップ</p>
+            </div>
+          </div>
+          <div class="card">
+            <h3 style="margin:0; font-size:16px; font-weight:900;">自動保存</h3>
+            <p class="hint">予定・カテゴリ・テンプレ・履歴は、この端末のブラウザ内に自動保存されます。</p>
+          </div>
+          <div class="card">
+            <h3 style="margin:0; font-size:16px; font-weight:900;">バックアップ</h3>
+            <p class="hint">iPhoneやブラウザ変更に備えて、たまにバックアップしておくと安心です。</p>
+            <button id="downloadBackupBtn" class="btn btn-dark mt" style="width:100%;">バックアップを書き出す</button>
+            <label class="btn btn-outline mt" style="display:block; width:100%;">
+              バックアップを読み込む
+              <input id="uploadBackupInput" type="file" accept="application/json" class="file-input" />
+            </label>
+          </div>
+          <div class="danger-box">
+            <h3>初期化</h3>
+            <p>現在の予定・追加カテゴリ・履歴・テンプレ編集を初期状態に戻します。</p>
+            <button id="resetDataBtn" class="btn btn-danger mt" style="width:100%;">初期状態に戻す</button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <nav class="nav">
+      <button data-screen="today" class="active"><span class="nav-icon">⌂</span>今日</button>
+      <button data-screen="add"><span class="nav-icon">＋</span>追加</button>
+      <button data-screen="template"><span class="nav-icon">▣</span>テンプレ</button>
+      <button data-screen="history"><span class="nav-icon">◷</span>履歴</button>
+      <button data-screen="settings"><span class="nav-icon">⚙</span>設定</button>
+    </nav>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "daily_schedule_clock_app_v1_final";
+
+    const BASE_CATEGORIES = [
+      { name: "就寝", color: "#24348f" },
+      { name: "朝の準備", color: "#ff8a00" },
+      { name: "通勤時間", color: "#e91e63" },
+      { name: "仕事", color: "#ffeb3b" },
+      { name: "運動", color: "#5b6fc8" },
+      { name: "食事", color: "#81c784" },
+      { name: "雑務", color: "#8e24aa" },
+      { name: "自由時間", color: "#388e3c" },
+      { name: "FX勉強", color: "#00acc1" },
+      { name: "休憩", color: "#b0bec5" },
+    ];
+
+    const COLOR_POOL = ["#24348f", "#ff8a00", "#e91e63", "#ffeb3b", "#5b6fc8", "#81c784", "#8e24aa", "#388e3c", "#00acc1", "#b0bec5", "#ef4444", "#14b8a6", "#f97316", "#6366f1", "#84cc16"];
+
+    const DEFAULT_TEMPLATES = [
+      { id: "weekday", name: "平日（通常）", memo: "仕事中心の基本形", items: [
+        { id: "a1", category: "就寝", start: "00:00", end: "05:30" }, { id: "a2", category: "朝の準備", start: "05:30", end: "06:30" },
+        { id: "a3", category: "通勤時間", start: "06:30", end: "08:00" }, { id: "a4", category: "仕事", start: "08:00", end: "19:00" },
+        { id: "a5", category: "通勤時間", start: "19:00", end: "20:30" }, { id: "a6", category: "運動", start: "20:30", end: "21:00" },
+        { id: "a7", category: "食事", start: "21:00", end: "22:00" }, { id: "a8", category: "雑務", start: "22:00", end: "23:00" },
+        { id: "a9", category: "自由時間", start: "23:00", end: "24:00" },
+      ]},
+      { id: "training", name: "筋トレ日", memo: "仕事後にジムを入れる日", items: [
+        { id: "b1", category: "就寝", start: "00:00", end: "05:30" }, { id: "b2", category: "朝の準備", start: "05:30", end: "06:30" },
+        { id: "b3", category: "通勤時間", start: "06:30", end: "08:00" }, { id: "b4", category: "仕事", start: "08:00", end: "18:30" },
+        { id: "b5", category: "通勤時間", start: "18:30", end: "19:30" }, { id: "b6", category: "運動", start: "19:30", end: "21:30" },
+        { id: "b7", category: "食事", start: "21:30", end: "22:30" }, { id: "b8", category: "FX勉強", start: "22:30", end: "23:15" },
+        { id: "b9", category: "自由時間", start: "23:15", end: "24:00" },
+      ]},
+      { id: "holiday", name: "休日", memo: "回復と自己投資の日", items: [
+        { id: "c1", category: "就寝", start: "00:00", end: "07:00" }, { id: "c2", category: "朝の準備", start: "07:00", end: "08:00" },
+        { id: "c3", category: "自由時間", start: "08:00", end: "10:00" }, { id: "c4", category: "運動", start: "10:00", end: "12:00" },
+        { id: "c5", category: "食事", start: "12:00", end: "13:00" }, { id: "c6", category: "雑務", start: "13:00", end: "15:00" },
+        { id: "c7", category: "FX勉強", start: "15:00", end: "17:00" }, { id: "c8", category: "自由時間", start: "17:00", end: "22:30" },
+        { id: "c9", category: "就寝", start: "22:30", end: "24:00" },
+      ]},
+      { id: "early", name: "早起き日", memo: "朝に勉強時間を確保", items: [
+        { id: "d1", category: "就寝", start: "00:00", end: "04:45" }, { id: "d2", category: "FX勉強", start: "04:45", end: "05:45" },
+        { id: "d3", category: "朝の準備", start: "05:45", end: "06:45" }, { id: "d4", category: "通勤時間", start: "06:45", end: "08:00" },
+        { id: "d5", category: "仕事", start: "08:00", end: "19:00" }, { id: "d6", category: "通勤時間", start: "19:00", end: "20:30" },
+        { id: "d7", category: "食事", start: "20:30", end: "21:30" }, { id: "d8", category: "自由時間", start: "21:30", end: "24:00" },
+      ]},
+    ];
+
+    const $ = (id) => document.getElementById(id);
+    const makeId = () => (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`);
+    const deepClone = (value) => JSON.parse(JSON.stringify(value));
+    const todayText = () => new Date().toISOString().slice(0, 10);
+    const copyItems = (items = []) => items.map(item => ({ ...item, id: makeId() }));
+
+    function toMinutes(value) {
+      if (!value) return 0;
+      if (value === "24:00") return 1440;
+      const [h, m] = value.split(":").map(Number);
+      return Math.min(1440, Math.max(0, h * 60 + (m || 0)));
+    }
+    function toTime(minutes) {
+      const n = Math.min(1440, Math.max(0, Math.round(minutes)));
+      if (n === 1440) return "24:00";
+      return `${String(Math.floor(n / 60)).padStart(2, "0")}:${String(n % 60).padStart(2, "0")}`;
+    }
+    function durationText(minutes) {
+      const h = Math.floor(minutes / 60);
+      const m = minutes % 60;
+      if (h && m) return `${h}:${String(m).padStart(2, "0")}`;
+      if (h) return `${h}:00`;
+      return `0:${String(m).padStart(2, "0")}`;
+    }
+    function hashColor(name) {
+      const text = name || "未分類";
+      let hash = 0;
+      for (let i = 0; i < text.length; i++) hash = text.charCodeAt(i) + ((hash << 5) - hash);
+      return COLOR_POOL[Math.abs(hash) % COLOR_POOL.length];
+    }
+    function getCat(category) {
+      return state.categories.find(c => c.name === category) || { name: category || "未分類", color: hashColor(category) };
+    }
+    function isLightColor(hex) {
+      const value = String(hex || "#999999").replace("#", "").padEnd(6, "9");
+      const r = parseInt(value.slice(0, 2), 16), g = parseInt(value.slice(2, 4), 16), b = parseInt(value.slice(4, 6), 16);
+      return (r * 299 + g * 587 + b * 114) / 1000 > 150;
+    }
+    function planTotal(items = []) {
+      return items.reduce((sum, item) => sum + Math.max(0, toMinutes(item.end) - toMinutes(item.start)), 0);
+    }
+    function normalize(items = []) {
+      return items
+        .map(item => ({ ...item, s: toMinutes(item.start), e: toMinutes(item.end) }))
+        .filter(item => item.e > item.s)
+        .sort((a, b) => a.s - b.s);
+    }
+    function polar(cx, cy, r, angle) {
+      const rad = ((angle - 90) * Math.PI) / 180;
+      return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+    }
+    function wedgePath(cx, cy, r, startMinutes, endMinutes) {
+      const startAngle = (startMinutes / 1440) * 360;
+      const endAngle = (endMinutes / 1440) * 360;
+      const start = polar(cx, cy, r, startAngle);
+      const end = polar(cx, cy, r, endAngle);
+      const largeArc = endAngle - startAngle > 180 ? 1 : 0;
+      return `M ${cx} ${cy} L ${start.x} ${start.y} A ${r} ${r} 0 ${largeArc} 1 ${end.x} ${end.y} Z`;
+    }
+    function escapeHtml(str) {
+      return String(str ?? "").replace(/[&<>'"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#039;", '"': "&quot;" }[ch]));
+    }
+
+    const saved = (() => {
+      try { return JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch { return null; }
+    })();
+
+    const state = {
+      items: copyItems(saved?.items || DEFAULT_TEMPLATES[0].items),
+      templates: saved?.templates || deepClone(DEFAULT_TEMPLATES),
+      categories: saved?.categories || deepClone(BASE_CATEGORIES),
+      history: saved?.history || [],
+      date: saved?.date || todayText(),
+      planTitle: saved?.planTitle || "今日の予定",
+      screen: "today",
+      inputMode: "range",
+      category: "仕事",
+      customColor: "#64748b",
+      clearArmed: false,
+      editingTemplateId: null,
+    };
+
+    let toastTimer = null;
+
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+          version: 1,
+          savedAt: new Date().toISOString(),
+          date: state.date,
+          planTitle: state.planTitle,
+          items: state.items,
+          templates: state.templates,
+          categories: state.categories,
+          history: state.history,
+        }));
+      } catch {}
+    }
+
+    function showToast(message) {
+      const toast = $("toast");
+      toast.textContent = message;
+      toast.classList.add("show");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove("show"), 1800);
+    }
+
+    function setScreen(screen) {
+      state.screen = screen;
+      document.querySelectorAll(".screen").forEach(el => el.classList.remove("active"));
+      const target = $(`screen-${screen}`);
+      if (target) target.classList.add("active");
+      document.querySelectorAll(".nav button").forEach(btn => btn.classList.toggle("active", btn.dataset.screen === screen || (screen === "templateEdit" && btn.dataset.screen === "template")));
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      render();
+    }
+
+    function renderClock(items, compact = false) {
+      const cx = 180, cy = 180, r = compact ? 126 : 148;
+      const displayItems = normalize(items).map(item => ({ ...item, color: getCat(item.category).color }));
+      let svg = `<svg viewBox="0 0 360 360" class="clock-svg ${compact ? "clock-mini" : ""}" role="img" aria-label="24時間円グラフ" xmlns="http://www.w3.org/2000/svg">`;
+      svg += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="#f7f7fb" />`;
+      displayItems.forEach(item => {
+        svg += `<path d="${wedgePath(cx, cy, r, item.s, item.e)}" fill="${item.color}" stroke="white" stroke-width="0.7" />`;
+      });
+      for (let h = 0; h < 24; h++) {
+        const a = (h / 24) * 360;
+        const p1 = polar(cx, cy, r - 2, a);
+        const p2 = polar(cx, cy, r + 13, a);
+        const label = polar(cx, cy, r + 28, a);
+        svg += `<line x1="${p1.x}" y1="${p1.y}" x2="${p2.x}" y2="${p2.y}" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" />`;
+        if (!compact) svg += `<text x="${label.x}" y="${label.y + 4}" text-anchor="middle" fill="#334155" font-size="12" font-weight="700">${h}</text>`;
+      }
+      if (!compact) {
+        displayItems.forEach(item => {
+          const mid = (item.s + item.e) / 2;
+          const span = item.e - item.s;
+          if (span < 28) return;
+          const label = polar(cx, cy, r * 0.63, (mid / 1440) * 360);
+          const dark = isLightColor(item.color);
+          const fill1 = dark ? "#0f172a" : "#ffffff";
+          const fill2 = dark ? "#334155" : "#ffffff";
+          const stroke = dark ? "rgba(255,255,255,.55)" : "rgba(0,0,0,.2)";
+          svg += `<text x="${label.x}" y="${label.y - 5}" text-anchor="middle" fill="${fill1}" font-size="13" font-weight="900" style="paint-order:stroke;stroke:${stroke};stroke-width:3px;">${escapeHtml(item.category)}</text>`;
+          svg += `<text x="${label.x}" y="${label.y + 13}" text-anchor="middle" fill="${fill2}" font-size="10" font-weight="800" style="paint-order:stroke;stroke:${stroke};stroke-width:2px;">${durationText(span)}</text>`;
+        });
+      }
+      svg += `<circle cx="${cx}" cy="${cy}" r="2.5" fill="#334155" opacity="0.65" />`;
+      svg += `</svg>`;
+      return svg;
+    }
+
+    function renderToday() {
+      $("planTitle").value = state.planTitle;
+      $("planDate").value = state.date;
+      $("chartWrap").innerHTML = renderClock(state.items);
+      const items = normalize(state.items);
+      const total = items.reduce((sum, item) => sum + item.e - item.s, 0);
+      const remaining = 1440 - total;
+      const hasOverlap = items.some((item, index) => index > 0 && item.s < items[index - 1].e);
+      $("totalText").textContent = durationText(total);
+      $("remainingText").textContent = durationText(Math.abs(remaining));
+      $("remainingText").className = remaining < 0 ? "state-bad" : "";
+      $("statusText").textContent = total === 1440 && !hasOverlap ? "完成" : hasOverlap ? "重複あり" : "調整中";
+      $("statusText").className = total === 1440 && !hasOverlap ? "state-ok" : hasOverlap ? "state-bad" : "state-warn";
+      $("overlapAlert").style.display = hasOverlap ? "block" : "none";
+      $("clearAllBtn").textContent = state.clearArmed ? "もう一度で削除" : "全削除";
+      $("clearAllBtn").className = state.clearArmed ? "btn-muted btn-armed" : "btn-muted";
+
+      const list = $("itemList");
+      if (!items.length) {
+        list.innerHTML = `<div class="empty">まだ予定がありません。テンプレートか追加ボタンから作成できます。</div>`;
+      } else {
+        list.innerHTML = items.map(item => `
+          <div class="item-row">
+            <span class="dot" style="background:${getCat(item.category).color}"></span>
+            <div class="item-body">
+              <strong>${escapeHtml(item.category)}</strong>
+              <span>${item.start}〜${item.end} / ${durationText(item.e - item.s)}</span>
+            </div>
+            <button class="btn-muted" data-delete-item="${item.id}">削除</button>
+          </div>
+        `).join("");
+      }
+    }
+
+    function renderAdd() {
+      $("modeRange").classList.toggle("active", state.inputMode === "range");
+      $("modeDuration").classList.toggle("active", state.inputMode === "duration");
+      $("endBlock").style.display = state.inputMode === "range" ? "block" : "none";
+      $("durationBlock").style.display = state.inputMode === "duration" ? "block" : "none";
+      $("categoryInput").value = state.category;
+      const existing = state.categories.find(cat => cat.name === state.category.trim());
+      $("categoryColor").value = existing ? existing.color : state.customColor;
+      $("catButtons").innerHTML = state.categories.slice(0, 12).map(cat => {
+        const selected = cat.name === state.category;
+        const color = isLightColor(cat.color) ? "#0f172a" : "#ffffff";
+        return `<button class="cat-btn ${selected ? "selected" : ""}" data-cat="${escapeHtml(cat.name)}" style="background:${cat.color};color:${color};">${escapeHtml(cat.name)}</button>`;
+      }).join("");
+    }
+
+    function renderTemplates() {
+      const list = $("templateList");
+      if (!state.templates.length) {
+        list.innerHTML = `<div class="empty">テンプレートがありません。「＋保存」で今の予定をテンプレート化できます。</div>`;
+        return;
+      }
+      list.innerHTML = state.templates.map(template => `
+        <div class="template-card">
+          <div class="template-main">
+            <div>${renderClock(template.items, true)}</div>
+            <div class="template-info">
+              <strong>${escapeHtml(template.name)}</strong>
+              <p>${escapeHtml(template.memo || "メモなし")}</p>
+              <small>合計 ${durationText(planTotal(template.items))}</small>
+            </div>
+          </div>
+          <div class="card-actions">
+            <button class="btn btn-dark" data-apply-template="${template.id}">反映する</button>
+            <button class="btn btn-outline" data-edit-template="${template.id}">編集</button>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    function renderHistory() {
+      const list = $("historyList");
+      if (!state.history.length) {
+        list.innerHTML = `<div class="empty">履歴はまだありません。「履歴保存」で残せます。</div>`;
+        return;
+      }
+      list.innerHTML = state.history.map(record => `
+        <div class="history-card">
+          <div class="history-main">
+            <div>${renderClock(record.items, true)}</div>
+            <div class="history-info">
+              <strong>${escapeHtml(record.title)}</strong>
+              <p>${escapeHtml(record.date)}</p>
+              <small>合計 ${durationText(planTotal(record.items))}</small>
+            </div>
+          </div>
+          <div class="card-actions">
+            <button class="btn btn-dark" data-load-history="${record.id}">読み込む</button>
+            <button class="btn btn-soft-danger" data-delete-history="${record.id}">削除</button>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    function renderTemplateEdit() {
+      const template = state.templates.find(t => t.id === state.editingTemplateId);
+      if (!template) return;
+      $("editTemplateChart").innerHTML = renderClock(template.items, true);
+      $("templateNameInput").value = template.name;
+      $("templateMemoInput").value = template.memo || "";
+    }
+
+    function render() {
+      renderToday();
+      renderAdd();
+      renderTemplates();
+      renderHistory();
+      if (state.screen === "templateEdit") renderTemplateEdit();
+      saveState();
+    }
+
+    function addCategoryIfNeeded(name, color) {
+      const clean = name.trim();
+      if (!clean) return;
+      const exists = state.categories.some(cat => cat.name === clean);
+      if (!exists) state.categories.push({ name: clean, color: color || hashColor(clean) });
+    }
+
+    function updateCategoryColor(name, color) {
+      const clean = name.trim();
+      if (!clean) return;
+      const cat = state.categories.find(c => c.name === clean);
+      if (cat) cat.color = color;
+      else state.customColor = color;
+    }
+
+    function addItem() {
+      const cleanCategory = state.category.trim();
+      if (!cleanCategory) return showToast("カテゴリ名を入力してね");
+      let s = toMinutes($("startInput").value || "00:00");
+      let e = toMinutes($("endInput").value || "00:00");
+      if (state.inputMode === "duration") {
+        const duration = Number($("hourInput").value || 0) * 60 + Number($("minuteInput").value || 0);
+        e = s + duration;
+      }
+      if (e <= s) return showToast("終了時刻が開始時刻より後になるようにしてね");
+      if (e > 1440) return showToast("24:00を超えない範囲で入力してね");
+      addCategoryIfNeeded(cleanCategory, $("categoryColor").value);
+      state.items.push({ id: makeId(), category: cleanCategory, start: toTime(s), end: toTime(e) });
+      state.clearArmed = false;
+      setScreen("today");
+      showToast("予定を追加しました");
+    }
+
+    function saveAsTemplate() {
+      const name = state.planTitle.trim() || "新しいテンプレ";
+      state.templates.push({ id: makeId(), name, memo: "自分で保存したテンプレ", items: copyItems(state.items) });
+      showToast("テンプレートに保存しました");
+      render();
+    }
+
+    function saveToHistory() {
+      const record = { id: makeId(), title: state.planTitle.trim() || "予定", date: state.date, createdAt: new Date().toISOString(), items: copyItems(state.items) };
+      state.history = [record, ...state.history].slice(0, 50);
+      showToast("履歴に保存しました");
+      render();
+    }
+
+    function download(filename, content, type) {
+      const blob = new Blob([content], { type });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function downloadSvg() {
+      const svg = $("chartWrap").querySelector("svg");
+      if (!svg) return;
+      const clone = svg.cloneNode(true);
+      clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+      const source = new XMLSerializer().serializeToString(clone);
+      download(`daily-schedule-${state.date}.svg`, source, "image/svg+xml;charset=utf-8");
+      showToast("画像を保存しました");
+    }
+
+    function downloadBackup() {
+      const data = { version: 1, exportedAt: new Date().toISOString(), date: state.date, planTitle: state.planTitle, items: state.items, templates: state.templates, categories: state.categories, history: state.history };
+      download(`daily-schedule-backup-${state.date}.json`, JSON.stringify(data, null, 2), "application/json;charset=utf-8");
+      showToast("バックアップを保存しました");
+    }
+
+    function resetAppData() {
+      state.items = copyItems(DEFAULT_TEMPLATES[0].items);
+      state.templates = deepClone(DEFAULT_TEMPLATES);
+      state.categories = deepClone(BASE_CATEGORIES);
+      state.history = [];
+      state.date = todayText();
+      state.planTitle = "今日の予定";
+      state.clearArmed = false;
+      setScreen("today");
+      showToast("初期状態に戻しました");
+    }
+
+    // 初期入力値
+    $("startInput").value = "08:00";
+    $("endInput").value = "09:00";
+    $("hourInput").value = "1";
+    $("minuteInput").value = "0";
+
+    document.addEventListener("click", (event) => {
+      const target = event.target.closest("button, label");
+      if (!target) return;
+
+      if (target.dataset.screen) { setScreen(target.dataset.screen); return; }
+      if (target.id === "backBtn") { setScreen(state.screen === "templateEdit" ? "template" : "today"); return; }
+      if (target.id === "modeRange") { state.inputMode = "range"; render(); return; }
+      if (target.id === "modeDuration") { state.inputMode = "duration"; render(); return; }
+      if (target.id === "addItemBtn") { addItem(); return; }
+      if (target.id === "saveImageBtn") { downloadSvg(); return; }
+      if (target.id === "saveHistoryBtn") { saveToHistory(); return; }
+      if (target.id === "saveTemplateBtn" || target.id === "saveTemplateBtn2") { saveAsTemplate(); return; }
+      if (target.id === "downloadBackupBtn") { downloadBackup(); return; }
+      if (target.id === "resetDataBtn") { resetAppData(); return; }
+      if (target.id === "clearAllBtn") {
+        if (!state.clearArmed) {
+          state.clearArmed = true;
+          showToast("もう一度押すと全削除します");
+          setTimeout(() => { state.clearArmed = false; render(); }, 2500);
+        } else {
+          state.items = [];
+          state.clearArmed = false;
+          showToast("予定をリセットしました");
+        }
+        render();
+        return;
+      }
+      if (target.dataset.cat) {
+        state.category = target.dataset.cat;
+        render();
+        return;
+      }
+      if (target.dataset.deleteItem) {
+        state.items = state.items.filter(item => item.id !== target.dataset.deleteItem);
+        state.clearArmed = false;
+        render();
+        return;
+      }
+      if (target.dataset.applyTemplate) {
+        const template = state.templates.find(t => t.id === target.dataset.applyTemplate);
+        if (template) {
+          state.items = copyItems(template.items);
+          state.planTitle = template.name;
+          state.clearArmed = false;
+          setScreen("today");
+          showToast(`${template.name}を反映しました`);
+        }
+        return;
+      }
+      if (target.dataset.editTemplate) {
+        state.editingTemplateId = target.dataset.editTemplate;
+        setScreen("templateEdit");
+        return;
+      }
+      if (target.dataset.loadHistory) {
+        const record = state.history.find(r => r.id === target.dataset.loadHistory);
+        if (record) {
+          state.date = record.date;
+          state.planTitle = record.title;
+          state.items = copyItems(record.items);
+          setScreen("today");
+          showToast("履歴から読み込みました");
+        }
+        return;
+      }
+      if (target.dataset.deleteHistory) {
+        state.history = state.history.filter(r => r.id !== target.dataset.deleteHistory);
+        showToast("履歴を削除しました");
+        render();
+        return;
+      }
+      if (target.id === "saveTemplateInfoBtn") {
+        const template = state.templates.find(t => t.id === state.editingTemplateId);
+        if (!template) return;
+        const name = $("templateNameInput").value.trim();
+        if (!name) return showToast("テンプレート名を入力してね");
+        template.name = name;
+        template.memo = $("templateMemoInput").value.trim() || "メモなし";
+        showToast("テンプレート名を更新しました");
+        render();
+        return;
+      }
+      if (target.id === "loadTemplateForEditBtn") {
+        const template = state.templates.find(t => t.id === state.editingTemplateId);
+        if (!template) return;
+        state.items = copyItems(template.items);
+        state.planTitle = template.name;
+        setScreen("today");
+        showToast("編集用に今日の予定へ読み込みました");
+        return;
+      }
+      if (target.id === "overwriteTemplateBtn") {
+        const template = state.templates.find(t => t.id === state.editingTemplateId);
+        if (!template) return;
+        template.items = copyItems(state.items);
+        showToast("今日の予定で上書きしました");
+        render();
+        return;
+      }
+      if (target.id === "deleteTemplateBtn") {
+        state.templates = state.templates.filter(t => t.id !== state.editingTemplateId);
+        state.editingTemplateId = null;
+        setScreen("template");
+        showToast("テンプレートを削除しました");
+        return;
+      }
+    });
+
+    $("planTitle").addEventListener("input", e => { state.planTitle = e.target.value; saveState(); });
+    $("planDate").addEventListener("input", e => { state.date = e.target.value; saveState(); });
+    $("categoryInput").addEventListener("input", e => { state.category = e.target.value; renderAdd(); saveState(); });
+    $("categoryColor").addEventListener("input", e => { updateCategoryColor(state.category, e.target.value); renderAdd(); saveState(); });
+
+    $("uploadBackupInput").addEventListener("change", event => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const data = JSON.parse(String(reader.result));
+          state.date = data.date || todayText();
+          state.planTitle = data.planTitle || "今日の予定";
+          state.items = copyItems(data.items || []);
+          state.templates = data.templates || deepClone(DEFAULT_TEMPLATES);
+          state.categories = data.categories || deepClone(BASE_CATEGORIES);
+          state.history = data.history || [];
+          setScreen("today");
+          showToast("バックアップを読み込みました");
+        } catch {
+          showToast("読み込みに失敗しました");
+        }
+      };
+      reader.readAsText(file);
+      event.target.value = "";
+    });
+
+    render();
+  </script>
+</body>
+</html>
