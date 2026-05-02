@@ -2,333 +2,771 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="theme-color" content="#ffffff" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-title" content="1日の予定" />
-  <title>1日の予定</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Daily Schedule Clock</title>
   <style>
     :root {
       --bg: #f1f5f9;
       --card: #ffffff;
-      --text: #0f172a;
+      --ink: #0f172a;
       --muted: #64748b;
       --line: #e2e8f0;
       --soft: #f8fafc;
-      --dark: #0f172a;
+      --navy: #0f172a;
       --danger: #e11d48;
-      --blue: #1e3a8a;
-      --green: #059669;
-      --amber: #d97706;
-      --bottom-safe: env(safe-area-inset-bottom, 0px);
+      --ok: #059669;
+      --warn: #d97706;
+      --shadow: 0 12px 35px rgba(15, 23, 42, .08);
+      --radius: 24px;
     }
 
-    * { box-sizing: border-box; }
-    html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif; }
-    body { overscroll-behavior-y: none; }
-    button, input, select { font: inherit; }
-    button { cursor: pointer; border: 0; background: none; -webkit-tap-highlight-color: transparent; }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
-    .app { max-width: 430px; min-height: 100vh; margin: 0 auto; background: #fff; box-shadow: 0 20px 60px rgba(15, 23, 42, .18); position: relative; }
-    .header { position: sticky; top: 0; z-index: 20; background: rgba(255, 255, 255, .96); backdrop-filter: blur(12px); border-bottom: 1px solid var(--line); padding: 10px 14px; }
-    .header-row { display: flex; align-items: center; justify-content: space-between; }
-    .icon-btn { width: 40px; height: 40px; border-radius: 999px; color: var(--text); font-size: 24px; display: grid; place-items: center; }
-    .title { text-align: center; line-height: 1.2; }
-    .title h1 { margin: 0; font-size: 16px; font-weight: 900; letter-spacing: -.02em; }
-    .title p { margin: 3px 0 0; font-size: 11px; color: var(--muted); font-weight: 700; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif;
+      font-weight: 700;
+    }
 
-    main { padding: 16px 14px calc(104px + var(--bottom-safe)); }
+    button, input, select {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+      border: 0;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 480px;
+      min-height: 100vh;
+      margin: 0 auto;
+      background: #fff;
+      box-shadow: 0 0 40px rgba(15, 23, 42, .10);
+      position: relative;
+    }
+
+    .header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(255,255,255,.96);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--line);
+      padding: 14px 16px 12px;
+      display: grid;
+      grid-template-columns: 44px 1fr 44px;
+      align-items: center;
+    }
+
+    .icon-btn {
+      height: 44px;
+      width: 44px;
+      border-radius: 999px;
+      background: transparent;
+      color: var(--ink);
+      font-size: 28px;
+      line-height: 1;
+    }
+
+    .header-title {
+      text-align: center;
+    }
+
+    .header-title h1 {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 900;
+      letter-spacing: -.03em;
+    }
+
+    .header-title p {
+      margin: 3px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    main {
+      padding: 16px 16px calc(150px + env(safe-area-inset-bottom));
+    }
+
     .screen { display: none; }
     .screen.active { display: block; }
-    .stack { display: grid; gap: 14px; }
-    .card { background: var(--card); border: 1px solid #f1f5f9; border-radius: 26px; padding: 16px; box-shadow: 0 8px 25px rgba(15, 23, 42, .05); }
-    .small-card { background: var(--soft); border-radius: 18px; padding: 12px; }
-    .section-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
-    .section-head h2 { margin: 0; font-size: 20px; font-weight: 900; letter-spacing: -.03em; }
-    .section-head p, .hint { margin: 4px 0 0; color: var(--muted); font-size: 13px; line-height: 1.55; }
-    .label { display: block; font-size: 13px; font-weight: 900; margin-bottom: 7px; }
-    .input, .select { width: 100%; border: 1px solid var(--line); border-radius: 18px; background: #fff; padding: 13px 14px; outline: none; font-weight: 800; color: var(--text); min-height: 48px; }
-    .input:focus, .select:focus { border-color: #94a3b8; box-shadow: 0 0 0 3px rgba(148, 163, 184, .18); }
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-    .grid-5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
-    .row { display: flex; gap: 8px; align-items: center; }
-    .row > .grow { flex: 1; min-width: 0; }
 
-    .btn { border-radius: 18px; padding: 14px 12px; font-size: 14px; font-weight: 900; text-align: center; min-height: 48px; }
-    .btn-dark { background: var(--dark); color: #fff; box-shadow: 0 12px 24px rgba(15, 23, 42, .16); }
-    .btn-outline { border: 1px solid var(--line); color: #334155; background: #fff; }
-    .btn-blue { background: var(--blue); color: #fff; }
-    .btn-danger { background: var(--danger); color: #fff; }
-    .btn-soft-danger { border: 1px solid #fecdd3; color: var(--danger); background: #fff1f2; }
-    .btn-muted { color: #94a3b8; font-size: 12px; font-weight: 900; padding: 8px 10px; border-radius: 999px; }
-    .btn-armed { background: var(--danger); color: #fff; }
+    .stack { display: grid; gap: 16px; }
 
-    .mode-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; background: #f1f5f9; border-radius: 18px; padding: 4px; }
-    .mode-tabs button { border-radius: 14px; padding: 12px 8px; color: #64748b; font-size: 14px; font-weight: 900; }
-    .mode-tabs button.active { background: var(--dark); color: #fff; }
+    .card {
+      background: var(--card);
+      border: 1px solid #eef2f7;
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+      padding: 18px;
+    }
 
-    .chart-wrap { display: grid; justify-items: center; }
-    .clock-svg { width: 100%; max-width: 382px; display: block; filter: drop-shadow(0 4px 8px rgba(15, 23, 42, .06)); }
-    .clock-mini { width: 82px; height: 82px; }
-    .stats { margin-top: 10px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; }
-    .stat { background: var(--soft); border-radius: 17px; padding: 11px 6px; }
-    .stat span { display: block; color: var(--muted); font-size: 11px; font-weight: 700; }
-    .stat strong { display: block; margin-top: 3px; font-size: 17px; font-weight: 900; }
-    .state-ok { color: var(--green); }
-    .state-warn { color: var(--amber); }
-    .state-bad { color: var(--danger); }
-    .alert { border-radius: 18px; background: #fff1f2; color: #be123c; padding: 12px 14px; font-size: 13px; font-weight: 800; line-height: 1.5; margin-top: 10px; }
+    .field {
+      width: 100%;
+      border: 1px solid var(--line);
+      background: var(--soft);
+      color: var(--ink);
+      border-radius: 20px;
+      padding: 15px 16px;
+      outline: none;
+      font-size: 16px;
+      font-weight: 900;
+    }
 
-    .item-list { display: grid; gap: 8px; }
-    .item-row { display: flex; align-items: center; gap: 10px; background: var(--soft); border: 1px solid #f1f5f9; border-radius: 18px; padding: 10px; }
-    .dot { width: 16px; height: 16px; border-radius: 999px; flex: 0 0 auto; }
-    .item-body { flex: 1; min-width: 0; }
-    .item-body strong { display: block; font-weight: 900; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .item-body span { color: var(--muted); font-size: 12px; font-weight: 800; }
-    .empty { background: var(--soft); border-radius: 18px; padding: 14px; color: var(--muted); font-size: 13px; line-height: 1.6; }
+    .field:focus {
+      border-color: #94a3b8;
+      box-shadow: 0 0 0 4px rgba(148, 163, 184, .16);
+    }
 
-    .cat-buttons { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-    .cat-btn { border-radius: 17px; padding: 12px 8px; min-height: 46px; font-size: 13px; font-weight: 900; box-shadow: 0 4px 12px rgba(15, 23, 42, .07); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .cat-btn.selected { outline: 3px solid #0f172a; outline-offset: 2px; }
-    .color-input { width: 58px; height: 50px; padding: 4px; border-radius: 18px; border: 1px solid var(--line); background: #fff; flex: 0 0 auto; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 
-    .template-card, .history-card { border: 1px solid #f1f5f9; background: #fff; border-radius: 24px; padding: 14px; box-shadow: 0 8px 22px rgba(15, 23, 42, .05); }
-    .template-main, .history-main { display: flex; gap: 13px; align-items: center; }
-    .template-info, .history-info { min-width: 0; flex: 1; }
-    .template-info strong, .history-info strong { display: block; font-size: 15px; font-weight: 900; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-    .template-info p, .history-info p { margin: 3px 0 0; color: var(--muted); font-size: 13px; line-height: 1.45; }
-    .template-info small, .history-info small { display: block; margin-top: 6px; color: #334155; font-size: 12px; font-weight: 900; }
-    .card-actions { margin-top: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .btn {
+      border-radius: 22px;
+      padding: 16px 14px;
+      font-size: 15px;
+      font-weight: 900;
+      text-align: center;
+    }
 
-    .danger-box { background: #fff1f2; border: 1px solid #fecdd3; border-radius: 24px; padding: 15px; }
-    .danger-box h3 { margin: 0; color: #be123c; font-size: 16px; font-weight: 900; }
-    .danger-box p { margin: 7px 0 0; color: #e11d48; font-size: 13px; line-height: 1.6; }
+    .btn-primary {
+      background: var(--navy);
+      color: #fff;
+      box-shadow: 0 12px 24px rgba(15, 23, 42, .16);
+    }
 
-    .nav { position: fixed; left: 50%; bottom: 0; transform: translateX(-50%); z-index: 30; width: 100%; max-width: 430px; display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px; border-top: 1px solid var(--line); background: rgba(255,255,255,.96); backdrop-filter: blur(12px); padding: 7px 6px calc(8px + var(--bottom-safe)); }
-    .nav button { border-radius: 16px; padding: 6px 2px; font-size: 10px; font-weight: 900; color: #94a3b8; line-height: 1.15; }
-    .nav button .nav-icon { display: block; font-size: 18px; margin-bottom: 2px; }
-    .nav button.active { color: var(--text); }
+    .btn-outline {
+      background: #fff;
+      color: #334155;
+      border: 1px solid var(--line);
+    }
 
-    .toast { position: fixed; left: 50%; top: 64px; transform: translateX(-50%); z-index: 50; width: min(370px, 86vw); background: #0f172a; color: #fff; border-radius: 18px; padding: 12px 14px; text-align: center; font-size: 13px; font-weight: 900; box-shadow: 0 16px 38px rgba(15, 23, 42, .25); display: none; }
-    .toast.show { display: block; animation: toastIn .18s ease-out; }
-    @keyframes toastIn { from { opacity: 0; transform: translate(-50%, -8px); } to { opacity: 1; transform: translate(-50%, 0); } }
+    .btn-danger {
+      background: var(--danger);
+      color: #fff;
+    }
 
-    .file-input { display: none; }
-    .mt { margin-top: 14px; }
-    .mb { margin-bottom: 14px; }
-    .muted { color: var(--muted); }
+    .btn-blue {
+      background: #1e3a8a;
+      color: #fff;
+    }
+
+    .btn-small {
+      padding: 12px 10px;
+      border-radius: 16px;
+      font-size: 13px;
+    }
+
+    .btn-muted {
+      background: #f8fafc;
+      color: #94a3b8;
+      border: 1px solid #e2e8f0;
+    }
+
+    .btn-tab {
+      background: transparent;
+      color: #64748b;
+      border-radius: 16px;
+      padding: 13px 8px;
+      font-size: 14px;
+      font-weight: 900;
+    }
+
+    .btn-tab.active {
+      background: var(--navy);
+      color: #fff;
+    }
+
+    .segmented {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      padding: 4px;
+      background: #f1f5f9;
+      border-radius: 20px;
+    }
+
+    .chart-wrap {
+      overflow: visible;
+    }
+
+    #clockSvg, .mini-clock {
+      width: 100%;
+      display: block;
+      overflow: visible;
+    }
+
+    .stats {
+      margin-top: 10px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      text-align: center;
+    }
+
+    .stat {
+      background: #f8fafc;
+      border-radius: 20px;
+      padding: 14px 6px;
+    }
+
+    .stat-label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 900;
+      margin-bottom: 4px;
+    }
+
+    .stat-value {
+      font-size: 22px;
+      font-weight: 950;
+      letter-spacing: -.03em;
+    }
+
+    .status-ok { color: var(--ok); }
+    .status-warn { color: var(--warn); }
+    .status-danger { color: var(--danger); }
+
+    .section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .section-head h2,
+    .screen-title h2 {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 950;
+      letter-spacing: -.03em;
+    }
+
+    .screen-title p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 800;
+      line-height: 1.7;
+    }
+
+    .item-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .plan-item {
+      background: #f8fafc;
+      border: 1px solid #edf2f7;
+      border-radius: 24px;
+      padding: 14px;
+    }
+
+    .plan-top {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .dot {
+      width: 18px;
+      height: 18px;
+      border-radius: 999px;
+      flex: 0 0 auto;
+    }
+
+    .plan-main {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .plan-name {
+      font-size: 18px;
+      font-weight: 950;
+      letter-spacing: -.03em;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .plan-time {
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 900;
+    }
+
+    .item-actions {
+      margin-top: 12px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .note {
+      border-radius: 20px;
+      padding: 14px 16px;
+      background: #f8fafc;
+      color: #64748b;
+      font-size: 14px;
+      font-weight: 800;
+      line-height: 1.8;
+    }
+
+    .note.warn {
+      background: #fff7ed;
+      color: #c2410c;
+    }
+
+    .note.danger {
+      background: #fff1f2;
+      color: #be123c;
+    }
+
+    .form-label {
+      display: block;
+      margin: 0 0 8px;
+      color: var(--ink);
+      font-size: 14px;
+      font-weight: 950;
+    }
+
+    .category-row {
+      display: grid;
+      grid-template-columns: 1fr 64px;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .color-input {
+      width: 64px;
+      height: 54px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 6px;
+      background: #fff;
+    }
+
+    .hint {
+      margin: 8px 0 0;
+      color: #94a3b8;
+      font-size: 12px;
+      font-weight: 800;
+      line-height: 1.6;
+    }
+
+    .time-select {
+      display: grid;
+      gap: 8px;
+    }
+
+    .time-row {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .time-row select {
+      width: 100%;
+      text-align: center;
+      text-align-last: center;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--ink);
+      border-radius: 18px;
+      padding: 15px 10px;
+      font-size: 17px;
+      font-weight: 950;
+      outline: none;
+    }
+
+    .colon {
+      color: #94a3b8;
+      font-weight: 950;
+    }
+
+    .category-buttons {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .cat-btn {
+      border-radius: 18px;
+      padding: 13px 6px;
+      font-size: 13px;
+      font-weight: 950;
+      box-shadow: 0 5px 12px rgba(15, 23, 42, .06);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .cat-btn.selected {
+      outline: 3px solid #0f172a;
+      outline-offset: 2px;
+    }
+
+    .template-card,
+    .history-card {
+      border: 1px solid #edf2f7;
+      background: #fff;
+      border-radius: 26px;
+      padding: 15px;
+      box-shadow: var(--shadow);
+    }
+
+    .row-with-mini {
+      display: grid;
+      grid-template-columns: 82px 1fr;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .mini-holder {
+      width: 82px;
+    }
+
+    .card-title {
+      margin: 0;
+      font-size: 17px;
+      font-weight: 950;
+      letter-spacing: -.03em;
+    }
+
+    .card-sub {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 800;
+      line-height: 1.5;
+    }
+
+    .card-total {
+      margin-top: 7px;
+      color: #334155;
+      font-size: 12px;
+      font-weight: 950;
+    }
+
+    .bottom-nav {
+      position: fixed;
+      left: 50%;
+      bottom: 0;
+      transform: translateX(-50%);
+      z-index: 60;
+      width: 100%;
+      max-width: 480px;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 2px;
+      background: rgba(255,255,255,.96);
+      backdrop-filter: blur(14px);
+      border-top: 1px solid var(--line);
+      padding: 8px 8px calc(16px + env(safe-area-inset-bottom));
+    }
+
+    .nav-btn {
+      background: transparent;
+      color: #94a3b8;
+      border-radius: 16px;
+      padding: 7px 2px 5px;
+      font-size: 10px;
+      font-weight: 950;
+    }
+
+    .nav-btn span {
+      display: block;
+      font-size: 19px;
+      line-height: 1.1;
+      margin-bottom: 2px;
+    }
+
+    .nav-btn.active {
+      color: var(--ink);
+    }
+
+    .toast {
+      position: fixed;
+      top: 72px;
+      left: 50%;
+      z-index: 100;
+      transform: translateX(-50%);
+      width: min(420px, calc(100% - 40px));
+      background: #0f172a;
+      color: #fff;
+      border-radius: 18px;
+      padding: 13px 16px;
+      text-align: center;
+      font-size: 14px;
+      font-weight: 900;
+      box-shadow: 0 14px 40px rgba(15, 23, 42, .22);
+      display: none;
+    }
+
+    .empty {
+      border-radius: 20px;
+      background: #f8fafc;
+      color: #64748b;
+      padding: 16px;
+      font-size: 14px;
+      line-height: 1.7;
+      font-weight: 800;
+    }
+
+    .hidden-file {
+      display: none;
+    }
+
+    @media (max-width: 360px) {
+      .header-title h1 { font-size: 19px; }
+      .stat-value { font-size: 18px; }
+      .btn { font-size: 14px; }
+      main { padding-left: 12px; padding-right: 12px; }
+    }
   </style>
 </head>
 <body>
   <div class="app">
     <header class="header">
-      <div class="header-row">
-        <button class="icon-btn" id="backBtn" aria-label="戻る">‹</button>
-        <div class="title">
-          <h1>1日の予定</h1>
-          <p>24時間を円グラフで可視化</p>
-        </div>
-        <button class="icon-btn" data-screen="template" aria-label="テンプレート">☰</button>
+      <button class="icon-btn" id="backBtn" aria-label="戻る">‹</button>
+      <div class="header-title">
+        <h1>1日の予定</h1>
+        <p>24時間を円グラフで可視化</p>
       </div>
+      <button class="icon-btn" id="menuBtn" aria-label="テンプレート">≡</button>
     </header>
 
     <div class="toast" id="toast"></div>
 
     <main>
-      <section id="screen-today" class="screen active">
+      <section id="screenToday" class="screen active">
         <div class="stack">
           <div class="stack" style="gap:10px;">
-            <input id="planTitle" class="input" placeholder="予定名" />
-            <input id="planDate" type="date" class="input" />
+            <input id="planTitle" class="field" placeholder="予定名" />
+            <input id="planDate" class="field" type="date" />
           </div>
 
-          <div class="card">
-            <div class="chart-wrap" id="chartWrap"></div>
+          <div class="card chart-wrap">
+            <svg id="clockSvg" viewBox="0 0 360 360" role="img" aria-label="24時間円グラフ"></svg>
             <div class="stats">
-              <div class="stat"><span>合計</span><strong id="totalText">0:00</strong></div>
-              <div class="stat"><span>残り</span><strong id="remainingText">24:00</strong></div>
-              <div class="stat"><span>状態</span><strong id="statusText" class="state-warn">調整中</strong></div>
+              <div class="stat">
+                <div class="stat-label">合計</div>
+                <div class="stat-value" id="totalText">0:00</div>
+              </div>
+              <div class="stat">
+                <div class="stat-label">残り</div>
+                <div class="stat-value" id="remainingText">24:00</div>
+              </div>
+              <div class="stat">
+                <div class="stat-label">状態</div>
+                <div class="stat-value" id="statusText">調整中</div>
+              </div>
             </div>
-            <div id="overlapAlert" class="alert" style="display:none;">時間が重なっている予定があります。</div>
+            <div id="overlapWarn" class="note danger" style="display:none;margin-top:12px;">時間が重なっている予定があります。</div>
           </div>
 
           <div class="grid-2">
-            <button class="btn btn-dark" data-screen="add">＋ 予定を追加</button>
-            <button class="btn btn-outline" id="saveImageBtn">画像保存</button>
-            <button class="btn btn-outline" id="saveHistoryBtn">履歴保存</button>
-            <button class="btn btn-outline" id="saveTemplateBtn">テンプレ化</button>
+            <button class="btn btn-primary" id="addPlanBtn">＋ 予定を追加</button>
+            <button class="btn btn-outline" id="imageSaveBtn">画像保存</button>
+            <button class="btn btn-outline" id="historySaveBtn">履歴保存</button>
+            <button class="btn btn-outline" id="templateSaveBtn">テンプレ化</button>
           </div>
 
           <div class="card">
-            <div class="section-head" style="margin-bottom:10px; align-items:center;">
-              <h2 style="font-size:16px;">予定一覧</h2>
-              <button id="clearAllBtn" class="btn-muted">全削除</button>
+            <div class="section-head">
+              <h2>予定一覧</h2>
+              <button class="btn btn-small btn-muted" id="clearAllBtn">全削除</button>
             </div>
-            <div id="itemList" class="item-list"></div>
+            <div class="item-list" id="planList"></div>
           </div>
         </div>
       </section>
 
-      <section id="screen-add" class="screen">
+      <section id="screenEdit" class="screen">
         <div class="stack">
           <div class="card">
-            <div class="mode-tabs">
-              <button id="modeRange" class="active">時間で入力</button>
-              <button id="modeDuration">合計時間で入力</button>
+            <div class="section-head">
+              <div class="screen-title">
+                <h2 id="editTitle">予定を追加</h2>
+                <p>24:00（翌0:00）まで入力できます。</p>
+              </div>
+              <button class="btn btn-small btn-outline" id="newModeBtn" style="display:none;">新規に戻す</button>
             </div>
 
-            <div class="stack mt">
-              <label>
-                <span class="label">カテゴリ（自由入力OK）</span>
-                <div class="row">
-                  <input id="categoryInput" class="input grow" placeholder="例：歯医者、買い物、デート" />
-                  <input id="categoryColor" type="color" class="color-input" aria-label="カテゴリ色" />
+            <div class="segmented">
+              <button class="btn-tab active" id="rangeModeBtn">時間で入力</button>
+              <button class="btn-tab" id="durationModeBtn">合計時間で入力</button>
+            </div>
+
+            <div class="stack" style="margin-top:18px;">
+              <div>
+                <label class="form-label">カテゴリ（自由入力OK）</label>
+                <div class="category-row">
+                  <input id="categoryInput" class="field" placeholder="例：歯医者、買い物、デート" />
+                  <input id="categoryColor" class="color-input" type="color" />
                 </div>
                 <p class="hint">未登録カテゴリは追加時に自動保存されます。</p>
-              </label>
+              </div>
 
-              <div class="grid-2">
-                <label>
-                  <span class="label">開始時刻</span>
-                  <input id="startInput" type="time" class="input" />
-                </label>
-                <label id="endBlock">
-                  <span class="label">終了時刻</span>
-                  <input id="endInput" type="time" class="input" />
-                </label>
-                <div id="durationBlock" style="display:none;">
-                  <span class="label">合計時間</span>
-                  <div class="grid-2">
-                    <input id="hourInput" type="number" min="0" max="24" class="input" />
-                    <select id="minuteInput" class="select">
-                      <option value="0">0分</option>
-                      <option value="15">15分</option>
-                      <option value="30">30分</option>
-                      <option value="45">45分</option>
-                    </select>
-                  </div>
+              <div class="time-select">
+                <label class="form-label">開始時刻</label>
+                <div class="time-row">
+                  <select id="startHour"></select>
+                  <span class="colon">:</span>
+                  <select id="startMinute"></select>
                 </div>
+              </div>
+
+              <div id="rangeFields" class="time-select">
+                <label class="form-label">終了時刻</label>
+                <div class="time-row">
+                  <select id="endHour"></select>
+                  <span class="colon">:</span>
+                  <select id="endMinute"></select>
+                </div>
+                <p class="hint">終了は24:00を選べます。開始が夜で終了00:00なら、自動で24:00扱いになります。</p>
+              </div>
+
+              <div id="durationFields" style="display:none;">
+                <label class="form-label">合計時間</label>
+                <div class="grid-2">
+                  <input id="durationHour" class="field" type="number" min="0" max="24" />
+                  <select id="durationMinute" class="field"></select>
+                </div>
+              </div>
+
+              <div class="note">
+                <div style="color:#94a3b8;font-size:12px;">入力プレビュー</div>
+                <div id="previewText" style="margin-top:4px;color:#334155;font-weight:950;">--</div>
               </div>
 
               <div>
-                <span class="label">よく使うカテゴリ</span>
-                <div id="catButtons" class="cat-buttons"></div>
+                <label class="form-label">よく使うカテゴリ</label>
+                <div class="category-buttons" id="categoryButtons"></div>
               </div>
 
-              <button id="addItemBtn" class="btn btn-dark">追加する</button>
+              <button class="btn btn-primary" id="submitItemBtn">追加する</button>
+              <button class="btn btn-outline" id="cancelEditBtn" style="display:none;">キャンセル</button>
             </div>
           </div>
         </div>
       </section>
 
-      <section id="screen-template" class="screen">
+      <section id="screenTemplate" class="screen">
         <div class="stack">
           <div class="section-head">
-            <div>
+            <div class="screen-title">
               <h2>テンプレート</h2>
-              <p>反映・編集・上書きができます</p>
+              <p>反映・編集・上書きができます。</p>
             </div>
-            <button id="saveTemplateBtn2" class="btn btn-dark" style="padding:12px 14px; min-height:44px;">＋保存</button>
+            <button class="btn btn-small btn-primary" id="templateSaveTopBtn">＋保存</button>
           </div>
-          <div id="templateList" class="stack"></div>
+          <div class="stack" id="templateList"></div>
         </div>
       </section>
 
-      <section id="screen-history" class="screen">
+      <section id="screenTemplateEdit" class="screen">
         <div class="stack">
-          <div class="section-head">
-            <div>
-              <h2>履歴</h2>
-              <p>同じ日に複数パターン作った時も残せます</p>
-            </div>
-          </div>
-          <div id="historyList" class="stack"></div>
-        </div>
-      </section>
-
-      <section id="screen-templateEdit" class="screen">
-        <div class="stack">
-          <div class="section-head">
-            <div>
-              <h2>テンプレート編集</h2>
-              <p>名前変更・今日の予定で上書き・削除ができます</p>
-            </div>
+          <div class="screen-title">
+            <h2>テンプレート編集</h2>
+            <p>名前変更・今日の予定で上書き・削除ができます。</p>
           </div>
 
           <div class="card">
-            <div id="editTemplateChart" class="chart-wrap mb"></div>
-            <label>
-              <span class="label">テンプレート名</span>
-              <input id="templateNameInput" class="input" />
-            </label>
-            <label class="mt" style="display:block;">
-              <span class="label">メモ</span>
-              <input id="templateMemoInput" class="input" />
-            </label>
-            <button id="saveTemplateInfoBtn" class="btn btn-dark mt" style="width:100%;">名前・メモを保存</button>
+            <div id="templateEditMini" class="mini-holder" style="width:100%;max-width:180px;margin:0 auto 12px;"></div>
+            <label class="form-label">テンプレート名</label>
+            <input id="templateNameInput" class="field" />
+            <div style="height:12px;"></div>
+            <label class="form-label">メモ</label>
+            <input id="templateMemoInput" class="field" />
+            <div style="height:12px;"></div>
+            <button class="btn btn-primary" id="saveTemplateInfoBtn" style="width:100%;">名前・メモを保存</button>
           </div>
 
           <div class="card">
-            <h3 style="margin:0; font-size:16px; font-weight:900;">予定内容を変える</h3>
-            <p class="hint">一度「今日の予定へ読み込み」して、予定追加・削除で整えてから、この画面に戻って上書きすると変更できます。</p>
-            <div class="stack mt" style="gap:8px;">
-              <button id="loadTemplateForEditBtn" class="btn btn-outline">今日の予定へ読み込み</button>
-              <button id="overwriteTemplateBtn" class="btn btn-blue">今日の予定でこのテンプレを上書き</button>
-            </div>
+            <h3 style="margin:0;font-size:18px;font-weight:950;">予定内容を変える</h3>
+            <p class="card-sub">一度「今日の予定へ読み込み」して、予定を編集してから、この画面に戻って上書きすると変更できます。</p>
+            <div style="height:12px;"></div>
+            <button class="btn btn-outline" id="loadTemplateForEditBtn" style="width:100%;">今日の予定へ読み込み</button>
+            <div style="height:10px;"></div>
+            <button class="btn btn-blue" id="overwriteTemplateBtn" style="width:100%;">今日の予定でこのテンプレを上書き</button>
           </div>
 
-          <div class="danger-box">
-            <h3>削除</h3>
-            <p>不要になったテンプレートを消せます。</p>
-            <button id="deleteTemplateBtn" class="btn btn-danger mt" style="width:100%;">このテンプレートを削除</button>
+          <div class="card" style="background:#fff1f2;border-color:#ffe4e6;">
+            <h3 style="margin:0;font-size:18px;font-weight:950;color:#be123c;">削除</h3>
+            <p class="card-sub" style="color:#be123c;">不要になったテンプレートを消せます。</p>
+            <div style="height:12px;"></div>
+            <button class="btn btn-danger" id="deleteTemplateBtn" style="width:100%;">このテンプレートを削除</button>
           </div>
         </div>
       </section>
 
-      <section id="screen-settings" class="screen">
+      <section id="screenHistory" class="screen">
         <div class="stack">
-          <div class="section-head">
-            <div>
-              <h2>設定</h2>
-              <p>データ保存とバックアップ</p>
-            </div>
+          <div class="screen-title">
+            <h2>履歴</h2>
+            <p>同じ日に複数パターン作った時も残せます。</p>
           </div>
-          <div class="card">
-            <h3 style="margin:0; font-size:16px; font-weight:900;">自動保存</h3>
-            <p class="hint">予定・カテゴリ・テンプレ・履歴は、この端末のブラウザ内に自動保存されます。</p>
+          <div class="stack" id="historyList"></div>
+        </div>
+      </section>
+
+      <section id="screenSettings" class="screen">
+        <div class="stack">
+          <div class="screen-title">
+            <h2>設定</h2>
+            <p>データ保存とバックアップ</p>
           </div>
+
           <div class="card">
-            <h3 style="margin:0; font-size:16px; font-weight:900;">バックアップ</h3>
-            <p class="hint">iPhoneやブラウザ変更に備えて、たまにバックアップしておくと安心です。</p>
-            <button id="downloadBackupBtn" class="btn btn-dark mt" style="width:100%;">バックアップを書き出す</button>
-            <label class="btn btn-outline mt" style="display:block; width:100%;">
+            <h3 style="margin:0;font-size:18px;font-weight:950;">自動保存</h3>
+            <p class="card-sub">予定・カテゴリ・テンプレ・履歴は、この端末のブラウザ内に自動保存されます。</p>
+          </div>
+
+          <div class="card">
+            <h3 style="margin:0;font-size:18px;font-weight:950;">バックアップ</h3>
+            <p class="card-sub">iPhoneやブラウザ変更に備えて、たまにバックアップしておくと安心です。</p>
+            <div style="height:12px;"></div>
+            <button class="btn btn-primary" id="downloadBackupBtn" style="width:100%;">バックアップを書き出す</button>
+            <div style="height:10px;"></div>
+            <label class="btn btn-outline" style="display:block;width:100%;">
               バックアップを読み込む
-              <input id="uploadBackupInput" type="file" accept="application/json" class="file-input" />
+              <input id="uploadBackupInput" class="hidden-file" type="file" accept="application/json" />
             </label>
           </div>
-          <div class="danger-box">
-            <h3>初期化</h3>
-            <p>現在の予定・追加カテゴリ・履歴・テンプレ編集を初期状態に戻します。</p>
-            <button id="resetDataBtn" class="btn btn-danger mt" style="width:100%;">初期状態に戻す</button>
+
+          <div class="card" style="background:#fff1f2;border-color:#ffe4e6;">
+            <h3 style="margin:0;font-size:18px;font-weight:950;color:#be123c;">初期化</h3>
+            <p class="card-sub" style="color:#be123c;">現在の予定・追加カテゴリ・履歴・テンプレ編集を初期状態に戻します。</p>
+            <div style="height:12px;"></div>
+            <button class="btn btn-danger" id="resetAppBtn" style="width:100%;">初期状態に戻す</button>
           </div>
         </div>
       </section>
     </main>
 
-    <nav class="nav">
-      <button data-screen="today" class="active"><span class="nav-icon">⌂</span>今日</button>
-      <button data-screen="add"><span class="nav-icon">＋</span>追加</button>
-      <button data-screen="template"><span class="nav-icon">▣</span>テンプレ</button>
-      <button data-screen="history"><span class="nav-icon">◷</span>履歴</button>
-      <button data-screen="settings"><span class="nav-icon">⚙</span>設定</button>
+    <nav class="bottom-nav">
+      <button class="nav-btn active" data-screen="today"><span>⌂</span>今日</button>
+      <button class="nav-btn" data-screen="edit-add"><span>＋</span>追加</button>
+      <button class="nav-btn" data-screen="template"><span>▣</span>テンプレ</button>
+      <button class="nav-btn" data-screen="history"><span>◷</span>履歴</button>
+      <button class="nav-btn" data-screen="settings"><span>⚙</span>設定</button>
     </nav>
   </div>
 
   <script>
-    const STORAGE_KEY = "daily_schedule_clock_app_v1_final";
+    const STORAGE_KEY = "daily_schedule_clock_app_v2_html";
+    const OLD_KEYS = ["daily_schedule_clock_app_v2", "daily_schedule_clock_app_v1_final"];
 
-    const BASE_CATEGORIES = [
+    const baseCategories = [
       { name: "就寝", color: "#24348f" },
       { name: "朝の準備", color: "#ff8a00" },
       { name: "通勤時間", color: "#e91e63" },
@@ -341,126 +779,174 @@
       { name: "休憩", color: "#b0bec5" },
     ];
 
-    const COLOR_POOL = ["#24348f", "#ff8a00", "#e91e63", "#ffeb3b", "#5b6fc8", "#81c784", "#8e24aa", "#388e3c", "#00acc1", "#b0bec5", "#ef4444", "#14b8a6", "#f97316", "#6366f1", "#84cc16"];
+    const colorPool = [
+      "#24348f", "#ff8a00", "#e91e63", "#ffeb3b", "#5b6fc8",
+      "#81c784", "#8e24aa", "#388e3c", "#00acc1", "#b0bec5",
+      "#ef4444", "#14b8a6", "#f97316", "#6366f1", "#84cc16"
+    ];
 
-    const DEFAULT_TEMPLATES = [
-      { id: "weekday", name: "平日（通常）", memo: "仕事中心の基本形", items: [
-        { id: "a1", category: "就寝", start: "00:00", end: "05:30" }, { id: "a2", category: "朝の準備", start: "05:30", end: "06:30" },
-        { id: "a3", category: "通勤時間", start: "06:30", end: "08:00" }, { id: "a4", category: "仕事", start: "08:00", end: "19:00" },
-        { id: "a5", category: "通勤時間", start: "19:00", end: "20:30" }, { id: "a6", category: "運動", start: "20:30", end: "21:00" },
-        { id: "a7", category: "食事", start: "21:00", end: "22:00" }, { id: "a8", category: "雑務", start: "22:00", end: "23:00" },
-        { id: "a9", category: "自由時間", start: "23:00", end: "24:00" },
-      ]},
-      { id: "training", name: "筋トレ日", memo: "仕事後にジムを入れる日", items: [
-        { id: "b1", category: "就寝", start: "00:00", end: "05:30" }, { id: "b2", category: "朝の準備", start: "05:30", end: "06:30" },
-        { id: "b3", category: "通勤時間", start: "06:30", end: "08:00" }, { id: "b4", category: "仕事", start: "08:00", end: "18:30" },
-        { id: "b5", category: "通勤時間", start: "18:30", end: "19:30" }, { id: "b6", category: "運動", start: "19:30", end: "21:30" },
-        { id: "b7", category: "食事", start: "21:30", end: "22:30" }, { id: "b8", category: "FX勉強", start: "22:30", end: "23:15" },
-        { id: "b9", category: "自由時間", start: "23:15", end: "24:00" },
-      ]},
-      { id: "holiday", name: "休日", memo: "回復と自己投資の日", items: [
-        { id: "c1", category: "就寝", start: "00:00", end: "07:00" }, { id: "c2", category: "朝の準備", start: "07:00", end: "08:00" },
-        { id: "c3", category: "自由時間", start: "08:00", end: "10:00" }, { id: "c4", category: "運動", start: "10:00", end: "12:00" },
-        { id: "c5", category: "食事", start: "12:00", end: "13:00" }, { id: "c6", category: "雑務", start: "13:00", end: "15:00" },
-        { id: "c7", category: "FX勉強", start: "15:00", end: "17:00" }, { id: "c8", category: "自由時間", start: "17:00", end: "22:30" },
-        { id: "c9", category: "就寝", start: "22:30", end: "24:00" },
-      ]},
-      { id: "early", name: "早起き日", memo: "朝に勉強時間を確保", items: [
-        { id: "d1", category: "就寝", start: "00:00", end: "04:45" }, { id: "d2", category: "FX勉強", start: "04:45", end: "05:45" },
-        { id: "d3", category: "朝の準備", start: "05:45", end: "06:45" }, { id: "d4", category: "通勤時間", start: "06:45", end: "08:00" },
-        { id: "d5", category: "仕事", start: "08:00", end: "19:00" }, { id: "d6", category: "通勤時間", start: "19:00", end: "20:30" },
-        { id: "d7", category: "食事", start: "20:30", end: "21:30" }, { id: "d8", category: "自由時間", start: "21:30", end: "24:00" },
-      ]},
+    const minuteOptions = [0, 10, 15, 20, 30, 40, 45, 50];
+
+    const defaultTemplates = [
+      {
+        id: "weekday",
+        name: "平日（通常）",
+        memo: "仕事中心の基本形",
+        items: [
+          { id: "a1", category: "就寝", start: "00:00", end: "05:30" },
+          { id: "a2", category: "朝の準備", start: "05:30", end: "06:30" },
+          { id: "a3", category: "通勤時間", start: "06:30", end: "08:00" },
+          { id: "a4", category: "仕事", start: "08:00", end: "19:00" },
+          { id: "a5", category: "通勤時間", start: "19:00", end: "20:30" },
+          { id: "a6", category: "運動", start: "20:30", end: "21:00" },
+          { id: "a7", category: "食事", start: "21:00", end: "22:00" },
+          { id: "a8", category: "雑務", start: "22:00", end: "23:00" },
+          { id: "a9", category: "自由時間", start: "23:00", end: "24:00" },
+        ],
+      },
+      {
+        id: "training",
+        name: "筋トレ日",
+        memo: "仕事後にジムを入れる日",
+        items: [
+          { id: "b1", category: "就寝", start: "00:00", end: "05:30" },
+          { id: "b2", category: "朝の準備", start: "05:30", end: "06:30" },
+          { id: "b3", category: "通勤時間", start: "06:30", end: "08:00" },
+          { id: "b4", category: "仕事", start: "08:00", end: "18:30" },
+          { id: "b5", category: "通勤時間", start: "18:30", end: "19:30" },
+          { id: "b6", category: "運動", start: "19:30", end: "21:30" },
+          { id: "b7", category: "食事", start: "21:30", end: "22:30" },
+          { id: "b8", category: "FX勉強", start: "22:30", end: "23:15" },
+          { id: "b9", category: "自由時間", start: "23:15", end: "24:00" },
+        ],
+      },
+      {
+        id: "holiday",
+        name: "休日",
+        memo: "回復と自己投資の日",
+        items: [
+          { id: "c1", category: "就寝", start: "00:00", end: "07:00" },
+          { id: "c2", category: "朝の準備", start: "07:00", end: "08:00" },
+          { id: "c3", category: "自由時間", start: "08:00", end: "10:00" },
+          { id: "c4", category: "運動", start: "10:00", end: "12:00" },
+          { id: "c5", category: "食事", start: "12:00", end: "13:00" },
+          { id: "c6", category: "雑務", start: "13:00", end: "15:00" },
+          { id: "c7", category: "FX勉強", start: "15:00", end: "17:00" },
+          { id: "c8", category: "自由時間", start: "17:00", end: "22:30" },
+          { id: "c9", category: "就寝", start: "22:30", end: "24:00" },
+        ],
+      },
     ];
 
     const $ = (id) => document.getElementById(id);
-    const makeId = () => (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`);
-    const deepClone = (value) => JSON.parse(JSON.stringify(value));
-    const todayText = () => new Date().toISOString().slice(0, 10);
-    const copyItems = (items = []) => items.map(item => ({ ...item, id: makeId() }));
+
+    let state = {
+      date: todayText(),
+      planTitle: "今日の予定",
+      items: copyItems(defaultTemplates[0].items),
+      templates: defaultTemplates,
+      categories: baseCategories,
+      history: [],
+      screen: "today",
+      inputMode: "range",
+      editingItemId: null,
+      editingTemplateId: null,
+      clearArmed: false,
+      form: {
+        category: "仕事",
+        color: "#64748b",
+        startMin: 8 * 60,
+        endMin: 9 * 60,
+        durationHour: 1,
+        durationMinute: 0,
+      },
+    };
+
+    function makeId() {
+      if (crypto && crypto.randomUUID) return crypto.randomUUID();
+      return String(Date.now()) + "-" + Math.random().toString(16).slice(2);
+    }
+
+    function todayText() {
+      return new Date().toISOString().slice(0, 10);
+    }
+
+    function copyItems(items = []) {
+      return items.map(item => ({ ...item, id: makeId() }));
+    }
 
     function toMinutes(value) {
+      if (typeof value === "number") return Math.min(1440, Math.max(0, value));
       if (!value) return 0;
       if (value === "24:00") return 1440;
-      const [h, m] = value.split(":").map(Number);
-      return Math.min(1440, Math.max(0, h * 60 + (m || 0)));
+      const parts = String(value).split(":").map(Number);
+      const h = Number.isFinite(parts[0]) ? parts[0] : 0;
+      const m = Number.isFinite(parts[1]) ? parts[1] : 0;
+      return Math.min(1440, Math.max(0, h * 60 + m));
     }
+
     function toTime(minutes) {
       const n = Math.min(1440, Math.max(0, Math.round(minutes)));
       if (n === 1440) return "24:00";
-      return `${String(Math.floor(n / 60)).padStart(2, "0")}:${String(n % 60).padStart(2, "0")}`;
+      const h = String(Math.floor(n / 60)).padStart(2, "0");
+      const m = String(n % 60).padStart(2, "0");
+      return `${h}:${m}`;
     }
+
+    function displayTime(value) {
+      const m = toMinutes(value);
+      if (m === 1440) return "24:00（翌0:00）";
+      return toTime(m);
+    }
+
     function durationText(minutes) {
-      const h = Math.floor(minutes / 60);
-      const m = minutes % 60;
+      const safe = Math.max(0, Math.round(minutes));
+      const h = Math.floor(safe / 60);
+      const m = safe % 60;
       if (h && m) return `${h}:${String(m).padStart(2, "0")}`;
       if (h) return `${h}:00`;
       return `0:${String(m).padStart(2, "0")}`;
     }
+
     function hashColor(name) {
       const text = name || "未分類";
       let hash = 0;
-      for (let i = 0; i < text.length; i++) hash = text.charCodeAt(i) + ((hash << 5) - hash);
-      return COLOR_POOL[Math.abs(hash) % COLOR_POOL.length];
+      for (let i = 0; i < text.length; i += 1) hash = text.charCodeAt(i) + ((hash << 5) - hash);
+      return colorPool[Math.abs(hash) % colorPool.length];
     }
+
     function getCat(category) {
       return state.categories.find(c => c.name === category) || { name: category || "未分類", color: hashColor(category) };
     }
+
     function isLightColor(hex) {
-      const value = String(hex || "#999999").replace("#", "").padEnd(6, "9");
-      const r = parseInt(value.slice(0, 2), 16), g = parseInt(value.slice(2, 4), 16), b = parseInt(value.slice(4, 6), 16);
+      const value = hex.replace("#", "");
+      const r = parseInt(value.slice(0, 2), 16);
+      const g = parseInt(value.slice(2, 4), 16);
+      const b = parseInt(value.slice(4, 6), 16);
       return (r * 299 + g * 587 + b * 114) / 1000 > 150;
     }
-    function planTotal(items = []) {
-      return items.reduce((sum, item) => sum + Math.max(0, toMinutes(item.end) - toMinutes(item.start)), 0);
-    }
-    function normalize(items = []) {
-      return items
+
+    function normalizeItems(items) {
+      return [...items]
         .map(item => ({ ...item, s: toMinutes(item.start), e: toMinutes(item.end) }))
         .filter(item => item.e > item.s)
         .sort((a, b) => a.s - b.s);
     }
-    function polar(cx, cy, r, angle) {
-      const rad = ((angle - 90) * Math.PI) / 180;
-      return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
-    }
-    function wedgePath(cx, cy, r, startMinutes, endMinutes) {
-      const startAngle = (startMinutes / 1440) * 360;
-      const endAngle = (endMinutes / 1440) * 360;
-      const start = polar(cx, cy, r, startAngle);
-      const end = polar(cx, cy, r, endAngle);
-      const largeArc = endAngle - startAngle > 180 ? 1 : 0;
-      return `M ${cx} ${cy} L ${start.x} ${start.y} A ${r} ${r} 0 ${largeArc} 1 ${end.x} ${end.y} Z`;
-    }
-    function escapeHtml(str) {
-      return String(str ?? "").replace(/[&<>'"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#039;", '"': "&quot;" }[ch]));
+
+    function planTotal(items) {
+      return normalizeItems(items).reduce((sum, item) => sum + item.e - item.s, 0);
     }
 
-    const saved = (() => {
-      try { return JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch { return null; }
-    })();
+    function hasOverlap(items) {
+      const normalized = normalizeItems(items);
+      return normalized.some((item, index) => index > 0 && item.s < normalized[index - 1].e);
+    }
 
-    const state = {
-      items: copyItems(saved?.items || DEFAULT_TEMPLATES[0].items),
-      templates: saved?.templates || deepClone(DEFAULT_TEMPLATES),
-      categories: saved?.categories || deepClone(BASE_CATEGORIES),
-      history: saved?.history || [],
-      date: saved?.date || todayText(),
-      planTitle: saved?.planTitle || "今日の予定",
-      screen: "today",
-      inputMode: "range",
-      category: "仕事",
-      customColor: "#64748b",
-      clearArmed: false,
-      editingTemplateId: null,
-    };
-
-    let toastTimer = null;
-
-    function saveState() {
+    function save() {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify({
-          version: 1,
+          version: 2,
           savedAt: new Date().toISOString(),
           date: state.date,
           planTitle: state.planTitle,
@@ -469,224 +955,425 @@
           categories: state.categories,
           history: state.history,
         }));
-      } catch {}
+      } catch (_) {}
+    }
+
+    function load() {
+      let raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) {
+        for (const key of OLD_KEYS) {
+          raw = localStorage.getItem(key);
+          if (raw) break;
+        }
+      }
+      if (!raw) return;
+      try {
+        const data = JSON.parse(raw);
+        state.date = data.date || todayText();
+        state.planTitle = data.planTitle || "今日の予定";
+        state.items = data.items?.length ? data.items : copyItems(defaultTemplates[0].items);
+        state.templates = data.templates?.length ? data.templates : defaultTemplates;
+        state.categories = data.categories?.length ? data.categories : baseCategories;
+        state.history = data.history || [];
+      } catch (_) {}
     }
 
     function showToast(message) {
       const toast = $("toast");
       toast.textContent = message;
-      toast.classList.add("show");
-      clearTimeout(toastTimer);
-      toastTimer = setTimeout(() => toast.classList.remove("show"), 1800);
+      toast.style.display = "block";
+      clearTimeout(showToast._timer);
+      showToast._timer = setTimeout(() => {
+        toast.style.display = "none";
+      }, 1800);
     }
 
-    function setScreen(screen) {
-      state.screen = screen;
+    function switchScreen(name) {
+      state.screen = name;
       document.querySelectorAll(".screen").forEach(el => el.classList.remove("active"));
-      const target = $(`screen-${screen}`);
+      const map = {
+        today: "screenToday",
+        edit: "screenEdit",
+        template: "screenTemplate",
+        templateEdit: "screenTemplateEdit",
+        history: "screenHistory",
+        settings: "screenSettings",
+      };
+      $(map[name]).classList.add("active");
+
+      document.querySelectorAll(".nav-btn").forEach(btn => btn.classList.remove("active"));
+      const navMap = {
+        today: "today",
+        edit: "edit-add",
+        template: "template",
+        templateEdit: "template",
+        history: "history",
+        settings: "settings",
+      };
+      const target = document.querySelector(`.nav-btn[data-screen="${navMap[name]}"]`);
       if (target) target.classList.add("active");
-      document.querySelectorAll(".nav button").forEach(btn => btn.classList.toggle("active", btn.dataset.screen === screen || (screen === "templateEdit" && btn.dataset.screen === "template")));
-      window.scrollTo({ top: 0, behavior: "smooth" });
+
       render();
+      window.scrollTo({ top: 0, behavior: "instant" });
     }
 
-    function renderClock(items, compact = false) {
-      const cx = 180, cy = 180, r = compact ? 126 : 148;
-      const displayItems = normalize(items).map(item => ({ ...item, color: getCat(item.category).color }));
-      let svg = `<svg viewBox="0 0 360 360" class="clock-svg ${compact ? "clock-mini" : ""}" role="img" aria-label="24時間円グラフ" xmlns="http://www.w3.org/2000/svg">`;
-      svg += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="#f7f7fb" />`;
-      displayItems.forEach(item => {
-        svg += `<path d="${wedgePath(cx, cy, r, item.s, item.e)}" fill="${item.color}" stroke="white" stroke-width="0.7" />`;
+    function fillSelect(select, values, selected) {
+      select.innerHTML = "";
+      values.forEach(value => {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = String(value).padStart(2, "0");
+        if (Number(value) === Number(selected)) option.selected = true;
+        select.appendChild(option);
       });
-      for (let h = 0; h < 24; h++) {
-        const a = (h / 24) * 360;
-        const p1 = polar(cx, cy, r - 2, a);
-        const p2 = polar(cx, cy, r + 13, a);
-        const label = polar(cx, cy, r + 28, a);
-        svg += `<line x1="${p1.x}" y1="${p1.y}" x2="${p2.x}" y2="${p2.y}" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" />`;
-        if (!compact) svg += `<text x="${label.x}" y="${label.y + 4}" text-anchor="middle" fill="#334155" font-size="12" font-weight="700">${h}</text>`;
+    }
+
+    function getHour(minutes) {
+      if (minutes >= 1440) return 24;
+      return Math.floor(minutes / 60);
+    }
+
+    function getMinute(minutes) {
+      if (minutes >= 1440) return 0;
+      return minutes % 60;
+    }
+
+    function minuteValues(current) {
+      const values = [...minuteOptions];
+      if (!values.includes(current)) values.push(current);
+      return values.sort((a, b) => a - b);
+    }
+
+    function fillTimeSelectors() {
+      const startHour = getHour(state.form.startMin);
+      const startMinute = getMinute(state.form.startMin);
+      fillSelect($("startHour"), Array.from({ length: 24 }, (_, i) => i), startHour);
+      fillSelect($("startMinute"), minuteValues(startMinute), startMinute);
+
+      const endHour = getHour(state.form.endMin);
+      const endMinute = getMinute(state.form.endMin);
+      fillSelect($("endHour"), Array.from({ length: 25 }, (_, i) => i), endHour);
+      fillSelect($("endMinute"), minuteValues(endMinute), endMinute);
+      $("endMinute").disabled = endHour === 24;
+
+      fillSelect($("durationMinute"), minuteOptions, state.form.durationMinute);
+      $("durationHour").value = state.form.durationHour;
+    }
+
+    function updateFormFromState() {
+      $("editTitle").textContent = state.editingItemId ? "予定を編集" : "予定を追加";
+      $("newModeBtn").style.display = state.editingItemId ? "block" : "none";
+      $("cancelEditBtn").style.display = state.editingItemId ? "block" : "none";
+      $("submitItemBtn").textContent = state.editingItemId ? "更新する" : "追加する";
+      $("categoryInput").value = state.form.category;
+      const existing = state.categories.find(c => c.name === state.form.category.trim());
+      $("categoryColor").value = existing ? existing.color : state.form.color;
+
+      $("rangeFields").style.display = state.inputMode === "range" ? "block" : "none";
+      $("durationFields").style.display = state.inputMode === "duration" ? "block" : "none";
+      $("rangeModeBtn").classList.toggle("active", state.inputMode === "range");
+      $("durationModeBtn").classList.toggle("active", state.inputMode === "duration");
+
+      fillTimeSelectors();
+      updatePreview();
+    }
+
+    function updatePreview() {
+      let end = state.form.endMin;
+      if (state.inputMode === "duration") {
+        end = state.form.startMin + Number(state.form.durationHour || 0) * 60 + Number(state.form.durationMinute || 0);
+      } else if (end === 0 && state.form.startMin > 0) {
+        end = 1440;
       }
-      if (!compact) {
-        displayItems.forEach(item => {
-          const mid = (item.s + item.e) / 2;
-          const span = item.e - item.s;
-          if (span < 28) return;
-          const label = polar(cx, cy, r * 0.63, (mid / 1440) * 360);
-          const dark = isLightColor(item.color);
-          const fill1 = dark ? "#0f172a" : "#ffffff";
-          const fill2 = dark ? "#334155" : "#ffffff";
-          const stroke = dark ? "rgba(255,255,255,.55)" : "rgba(0,0,0,.2)";
-          svg += `<text x="${label.x}" y="${label.y - 5}" text-anchor="middle" fill="${fill1}" font-size="13" font-weight="900" style="paint-order:stroke;stroke:${stroke};stroke-width:3px;">${escapeHtml(item.category)}</text>`;
-          svg += `<text x="${label.x}" y="${label.y + 13}" text-anchor="middle" fill="${fill2}" font-size="10" font-weight="800" style="paint-order:stroke;stroke:${stroke};stroke-width:2px;">${durationText(span)}</text>`;
-        });
-      }
-      svg += `<circle cx="${cx}" cy="${cy}" r="2.5" fill="#334155" opacity="0.65" />`;
-      svg += `</svg>`;
-      return svg;
+      const ok = end > state.form.startMin && end <= 1440;
+      $("previewText").textContent = ok
+        ? `${displayTime(state.form.startMin)}〜${displayTime(end)} / ${durationText(end - state.form.startMin)}`
+        : `${displayTime(state.form.startMin)}〜${displayTime(end)} / 未確定`;
     }
 
-    function renderToday() {
-      $("planTitle").value = state.planTitle;
-      $("planDate").value = state.date;
-      $("chartWrap").innerHTML = renderClock(state.items);
-      const items = normalize(state.items);
-      const total = items.reduce((sum, item) => sum + item.e - item.s, 0);
-      const remaining = 1440 - total;
-      const hasOverlap = items.some((item, index) => index > 0 && item.s < items[index - 1].e);
-      $("totalText").textContent = durationText(total);
-      $("remainingText").textContent = durationText(Math.abs(remaining));
-      $("remainingText").className = remaining < 0 ? "state-bad" : "";
-      $("statusText").textContent = total === 1440 && !hasOverlap ? "完成" : hasOverlap ? "重複あり" : "調整中";
-      $("statusText").className = total === 1440 && !hasOverlap ? "state-ok" : hasOverlap ? "state-bad" : "state-warn";
-      $("overlapAlert").style.display = hasOverlap ? "block" : "none";
-      $("clearAllBtn").textContent = state.clearArmed ? "もう一度で削除" : "全削除";
-      $("clearAllBtn").className = state.clearArmed ? "btn-muted btn-armed" : "btn-muted";
-
-      const list = $("itemList");
-      if (!items.length) {
-        list.innerHTML = `<div class="empty">まだ予定がありません。テンプレートか追加ボタンから作成できます。</div>`;
-      } else {
-        list.innerHTML = items.map(item => `
-          <div class="item-row">
-            <span class="dot" style="background:${getCat(item.category).color}"></span>
-            <div class="item-body">
-              <strong>${escapeHtml(item.category)}</strong>
-              <span>${item.start}〜${item.end} / ${durationText(item.e - item.s)}</span>
-            </div>
-            <button class="btn-muted" data-delete-item="${item.id}">削除</button>
-          </div>
-        `).join("");
-      }
+    function openAdd() {
+      state.editingItemId = null;
+      state.inputMode = "range";
+      state.form = {
+        category: "仕事",
+        color: "#64748b",
+        startMin: 8 * 60,
+        endMin: 9 * 60,
+        durationHour: 1,
+        durationMinute: 0,
+      };
+      switchScreen("edit");
     }
 
-    function renderAdd() {
-      $("modeRange").classList.toggle("active", state.inputMode === "range");
-      $("modeDuration").classList.toggle("active", state.inputMode === "duration");
-      $("endBlock").style.display = state.inputMode === "range" ? "block" : "none";
-      $("durationBlock").style.display = state.inputMode === "duration" ? "block" : "none";
-      $("categoryInput").value = state.category;
-      const existing = state.categories.find(cat => cat.name === state.category.trim());
-      $("categoryColor").value = existing ? existing.color : state.customColor;
-      $("catButtons").innerHTML = state.categories.slice(0, 12).map(cat => {
-        const selected = cat.name === state.category;
-        const color = isLightColor(cat.color) ? "#0f172a" : "#ffffff";
-        return `<button class="cat-btn ${selected ? "selected" : ""}" data-cat="${escapeHtml(cat.name)}" style="background:${cat.color};color:${color};">${escapeHtml(cat.name)}</button>`;
-      }).join("");
-    }
-
-    function renderTemplates() {
-      const list = $("templateList");
-      if (!state.templates.length) {
-        list.innerHTML = `<div class="empty">テンプレートがありません。「＋保存」で今の予定をテンプレート化できます。</div>`;
-        return;
-      }
-      list.innerHTML = state.templates.map(template => `
-        <div class="template-card">
-          <div class="template-main">
-            <div>${renderClock(template.items, true)}</div>
-            <div class="template-info">
-              <strong>${escapeHtml(template.name)}</strong>
-              <p>${escapeHtml(template.memo || "メモなし")}</p>
-              <small>合計 ${durationText(planTotal(template.items))}</small>
-            </div>
-          </div>
-          <div class="card-actions">
-            <button class="btn btn-dark" data-apply-template="${template.id}">反映する</button>
-            <button class="btn btn-outline" data-edit-template="${template.id}">編集</button>
-          </div>
-        </div>
-      `).join("");
-    }
-
-    function renderHistory() {
-      const list = $("historyList");
-      if (!state.history.length) {
-        list.innerHTML = `<div class="empty">履歴はまだありません。「履歴保存」で残せます。</div>`;
-        return;
-      }
-      list.innerHTML = state.history.map(record => `
-        <div class="history-card">
-          <div class="history-main">
-            <div>${renderClock(record.items, true)}</div>
-            <div class="history-info">
-              <strong>${escapeHtml(record.title)}</strong>
-              <p>${escapeHtml(record.date)}</p>
-              <small>合計 ${durationText(planTotal(record.items))}</small>
-            </div>
-          </div>
-          <div class="card-actions">
-            <button class="btn btn-dark" data-load-history="${record.id}">読み込む</button>
-            <button class="btn btn-soft-danger" data-delete-history="${record.id}">削除</button>
-          </div>
-        </div>
-      `).join("");
-    }
-
-    function renderTemplateEdit() {
-      const template = state.templates.find(t => t.id === state.editingTemplateId);
-      if (!template) return;
-      $("editTemplateChart").innerHTML = renderClock(template.items, true);
-      $("templateNameInput").value = template.name;
-      $("templateMemoInput").value = template.memo || "";
-    }
-
-    function render() {
-      renderToday();
-      renderAdd();
-      renderTemplates();
-      renderHistory();
-      if (state.screen === "templateEdit") renderTemplateEdit();
-      saveState();
+    function openEdit(id) {
+      const item = state.items.find(x => x.id === id);
+      if (!item) return;
+      const start = toMinutes(item.start);
+      const end = toMinutes(item.end);
+      const duration = Math.max(0, end - start);
+      state.editingItemId = id;
+      state.inputMode = "range";
+      state.form = {
+        category: item.category,
+        color: getCat(item.category).color,
+        startMin: start,
+        endMin: end,
+        durationHour: Math.floor(duration / 60),
+        durationMinute: duration % 60,
+      };
+      switchScreen("edit");
     }
 
     function addCategoryIfNeeded(name, color) {
       const clean = name.trim();
       if (!clean) return;
-      const exists = state.categories.some(cat => cat.name === clean);
-      if (!exists) state.categories.push({ name: clean, color: color || hashColor(clean) });
-    }
-
-    function updateCategoryColor(name, color) {
-      const clean = name.trim();
-      if (!clean) return;
-      const cat = state.categories.find(c => c.name === clean);
-      if (cat) cat.color = color;
-      else state.customColor = color;
-    }
-
-    function addItem() {
-      const cleanCategory = state.category.trim();
-      if (!cleanCategory) return showToast("カテゴリ名を入力してね");
-      let s = toMinutes($("startInput").value || "00:00");
-      let e = toMinutes($("endInput").value || "00:00");
-      if (state.inputMode === "duration") {
-        const duration = Number($("hourInput").value || 0) * 60 + Number($("minuteInput").value || 0);
-        e = s + duration;
+      if (!state.categories.some(cat => cat.name === clean)) {
+        state.categories.push({ name: clean, color: color || hashColor(clean) });
       }
-      if (e <= s) return showToast("終了時刻が開始時刻より後になるようにしてね");
-      if (e > 1440) return showToast("24:00を超えない範囲で入力してね");
-      addCategoryIfNeeded(cleanCategory, $("categoryColor").value);
-      state.items.push({ id: makeId(), category: cleanCategory, start: toTime(s), end: toTime(e) });
+    }
+
+    function submitItem() {
+      const category = state.form.category.trim();
+      if (!category) {
+        showToast("カテゴリ名を入力してね");
+        return;
+      }
+
+      let start = state.form.startMin;
+      let end = state.form.endMin;
+
+      if (state.inputMode === "duration") {
+        end = start + Number(state.form.durationHour || 0) * 60 + Number(state.form.durationMinute || 0);
+      } else if (end === 0 && start > 0) {
+        end = 1440;
+      }
+
+      if (start >= 1440) {
+        showToast("開始時刻は24:00以外を選んでね");
+        return;
+      }
+
+      if (end <= start) {
+        showToast("終了時刻が開始時刻より後になるようにしてね");
+        return;
+      }
+
+      if (end > 1440) {
+        showToast("24:00を超えない範囲で入力してね");
+        return;
+      }
+
+      addCategoryIfNeeded(category, state.form.color);
+
+      const item = {
+        id: state.editingItemId || makeId(),
+        category,
+        start: toTime(start),
+        end: toTime(end),
+      };
+
+      if (state.editingItemId) {
+        state.items = state.items.map(x => x.id === state.editingItemId ? item : x);
+        showToast("予定を更新しました");
+      } else {
+        state.items.push(item);
+        showToast("予定を追加しました");
+      }
+
+      state.editingItemId = null;
+      save();
+      switchScreen("today");
+    }
+
+    function deleteItem(id) {
+      state.items = state.items.filter(item => item.id !== id);
+      save();
+      render();
+      showToast("削除しました");
+    }
+
+    function clearAll() {
+      if (!state.clearArmed) {
+        state.clearArmed = true;
+        $("clearAllBtn").textContent = "もう一度で削除";
+        $("clearAllBtn").classList.remove("btn-muted");
+        $("clearAllBtn").classList.add("btn-danger");
+        showToast("もう一度押すと全削除します");
+        setTimeout(() => {
+          state.clearArmed = false;
+          render();
+        }, 2500);
+        return;
+      }
+      state.items = [];
       state.clearArmed = false;
-      setScreen("today");
-      showToast("予定を追加しました");
+      save();
+      render();
+      showToast("予定をリセットしました");
     }
 
-    function saveAsTemplate() {
+    function saveTemplate() {
       const name = state.planTitle.trim() || "新しいテンプレ";
-      state.templates.push({ id: makeId(), name, memo: "自分で保存したテンプレ", items: copyItems(state.items) });
+      state.templates.push({
+        id: makeId(),
+        name,
+        memo: "自分で保存したテンプレ",
+        items: copyItems(state.items),
+      });
+      save();
+      render();
       showToast("テンプレートに保存しました");
-      render();
     }
 
-    function saveToHistory() {
-      const record = { id: makeId(), title: state.planTitle.trim() || "予定", date: state.date, createdAt: new Date().toISOString(), items: copyItems(state.items) };
-      state.history = [record, ...state.history].slice(0, 50);
+    function applyTemplate(id) {
+      const template = state.templates.find(t => t.id === id);
+      if (!template) return;
+      state.items = copyItems(template.items);
+      state.planTitle = template.name;
+      save();
+      switchScreen("today");
+      showToast(`${template.name}を反映しました`);
+    }
+
+    function openTemplateEdit(id) {
+      state.editingTemplateId = id;
+      const template = state.templates.find(t => t.id === id);
+      if (!template) return;
+      $("templateNameInput").value = template.name;
+      $("templateMemoInput").value = template.memo || "";
+      switchScreen("templateEdit");
+    }
+
+    function saveTemplateInfo() {
+      const template = state.templates.find(t => t.id === state.editingTemplateId);
+      if (!template) return;
+      const name = $("templateNameInput").value.trim();
+      if (!name) {
+        showToast("テンプレート名を入力してね");
+        return;
+      }
+      template.name = name;
+      template.memo = $("templateMemoInput").value.trim() || "メモなし";
+      save();
+      render();
+      showToast("テンプレート名を更新しました");
+    }
+
+    function loadTemplateForEdit() {
+      const template = state.templates.find(t => t.id === state.editingTemplateId);
+      if (!template) return;
+      state.items = copyItems(template.items);
+      state.planTitle = template.name;
+      save();
+      switchScreen("today");
+      showToast("編集用に読み込みました");
+    }
+
+    function overwriteTemplate() {
+      const template = state.templates.find(t => t.id === state.editingTemplateId);
+      if (!template) return;
+      template.items = copyItems(state.items);
+      save();
+      render();
+      showToast("今日の予定で上書きしました");
+    }
+
+    function deleteTemplate() {
+      state.templates = state.templates.filter(t => t.id !== state.editingTemplateId);
+      state.editingTemplateId = null;
+      save();
+      switchScreen("template");
+      showToast("テンプレートを削除しました");
+    }
+
+    function saveHistory() {
+      state.history.unshift({
+        id: makeId(),
+        title: state.planTitle.trim() || "予定",
+        date: state.date,
+        createdAt: new Date().toISOString(),
+        items: copyItems(state.items),
+      });
+      state.history = state.history.slice(0, 50);
+      save();
+      render();
       showToast("履歴に保存しました");
-      render();
     }
 
-    function download(filename, content, type) {
+    function loadHistory(id) {
+      const record = state.history.find(h => h.id === id);
+      if (!record) return;
+      state.date = record.date;
+      state.planTitle = record.title;
+      state.items = copyItems(record.items);
+      save();
+      switchScreen("today");
+      showToast("履歴から読み込みました");
+    }
+
+    function deleteHistory(id) {
+      state.history = state.history.filter(h => h.id !== id);
+      save();
+      render();
+      showToast("履歴を削除しました");
+    }
+
+    function resetApp() {
+      if (!confirm("本当に初期状態に戻しますか？")) return;
+      state.date = todayText();
+      state.planTitle = "今日の予定";
+      state.items = copyItems(defaultTemplates[0].items);
+      state.templates = defaultTemplates;
+      state.categories = baseCategories;
+      state.history = [];
+      state.editingItemId = null;
+      save();
+      switchScreen("today");
+      showToast("初期状態に戻しました");
+    }
+
+    function downloadBackup() {
+      const data = {
+        version: 2,
+        exportedAt: new Date().toISOString(),
+        date: state.date,
+        planTitle: state.planTitle,
+        items: state.items,
+        templates: state.templates,
+        categories: state.categories,
+        history: state.history,
+      };
+      downloadBlob(
+        JSON.stringify(data, null, 2),
+        `daily-schedule-backup-${state.date}.json`,
+        "application/json;charset=utf-8"
+      );
+      showToast("バックアップを保存しました");
+    }
+
+    function uploadBackup(file) {
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const data = JSON.parse(String(reader.result));
+          state.date = data.date || todayText();
+          state.planTitle = data.planTitle || "今日の予定";
+          state.items = data.items || [];
+          state.templates = data.templates || defaultTemplates;
+          state.categories = data.categories || baseCategories;
+          state.history = data.history || [];
+          save();
+          switchScreen("today");
+          showToast("バックアップを読み込みました");
+        } catch (_) {
+          showToast("読み込みに失敗しました");
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function downloadBlob(content, filename, type) {
       const blob = new Blob([content], { type });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -697,175 +1384,391 @@
     }
 
     function downloadSvg() {
-      const svg = $("chartWrap").querySelector("svg");
-      if (!svg) return;
-      const clone = svg.cloneNode(true);
-      clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-      const source = new XMLSerializer().serializeToString(clone);
-      download(`daily-schedule-${state.date}.svg`, source, "image/svg+xml;charset=utf-8");
+      const svg = $("clockSvg").cloneNode(true);
+      svg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+      const source = new XMLSerializer().serializeToString(svg);
+      downloadBlob(source, `daily-schedule-${state.date}.svg`, "image/svg+xml;charset=utf-8");
       showToast("画像を保存しました");
     }
 
-    function downloadBackup() {
-      const data = { version: 1, exportedAt: new Date().toISOString(), date: state.date, planTitle: state.planTitle, items: state.items, templates: state.templates, categories: state.categories, history: state.history };
-      download(`daily-schedule-backup-${state.date}.json`, JSON.stringify(data, null, 2), "application/json;charset=utf-8");
-      showToast("バックアップを保存しました");
+    function polar(cx, cy, r, angle) {
+      const rad = ((angle - 90) * Math.PI) / 180;
+      return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
     }
 
-    function resetAppData() {
-      state.items = copyItems(DEFAULT_TEMPLATES[0].items);
-      state.templates = deepClone(DEFAULT_TEMPLATES);
-      state.categories = deepClone(BASE_CATEGORIES);
-      state.history = [];
-      state.date = todayText();
-      state.planTitle = "今日の予定";
-      state.clearArmed = false;
-      setScreen("today");
-      showToast("初期状態に戻しました");
+    function wedgePath(cx, cy, r, startMinutes, endMinutes) {
+      const startAngle = (startMinutes / 1440) * 360;
+      const endAngle = (endMinutes / 1440) * 360;
+      const start = polar(cx, cy, r, startAngle);
+      const end = polar(cx, cy, r, endAngle);
+      const largeArc = endAngle - startAngle > 180 ? 1 : 0;
+      return `M ${cx} ${cy} L ${start.x} ${start.y} A ${r} ${r} 0 ${largeArc} 1 ${end.x} ${end.y} Z`;
     }
 
-    // 初期入力値
-    $("startInput").value = "08:00";
-    $("endInput").value = "09:00";
-    $("hourInput").value = "1";
-    $("minuteInput").value = "0";
+    function svgEl(name, attrs = {}, text = "") {
+      const el = document.createElementNS("http://www.w3.org/2000/svg", name);
+      Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v));
+      if (text) el.textContent = text;
+      return el;
+    }
 
-    document.addEventListener("click", (event) => {
-      const target = event.target.closest("button, label");
-      if (!target) return;
+    function renderClock(svg, items, compact = false) {
+      svg.innerHTML = "";
+      const cx = 180, cy = 180, r = compact ? 126 : 148;
+      svg.appendChild(svgEl("circle", { cx, cy, r, fill: "#f7f7fb" }));
 
-      if (target.dataset.screen) { setScreen(target.dataset.screen); return; }
-      if (target.id === "backBtn") { setScreen(state.screen === "templateEdit" ? "template" : "today"); return; }
-      if (target.id === "modeRange") { state.inputMode = "range"; render(); return; }
-      if (target.id === "modeDuration") { state.inputMode = "duration"; render(); return; }
-      if (target.id === "addItemBtn") { addItem(); return; }
-      if (target.id === "saveImageBtn") { downloadSvg(); return; }
-      if (target.id === "saveHistoryBtn") { saveToHistory(); return; }
-      if (target.id === "saveTemplateBtn" || target.id === "saveTemplateBtn2") { saveAsTemplate(); return; }
-      if (target.id === "downloadBackupBtn") { downloadBackup(); return; }
-      if (target.id === "resetDataBtn") { resetAppData(); return; }
-      if (target.id === "clearAllBtn") {
-        if (!state.clearArmed) {
-          state.clearArmed = true;
-          showToast("もう一度押すと全削除します");
-          setTimeout(() => { state.clearArmed = false; render(); }, 2500);
-        } else {
-          state.items = [];
-          state.clearArmed = false;
-          showToast("予定をリセットしました");
+      const normalized = normalizeItems(items).map(item => ({
+        ...item,
+        color: getCat(item.category).color,
+      }));
+
+      normalized.forEach(item => {
+        svg.appendChild(svgEl("path", {
+          d: wedgePath(cx, cy, r, item.s, item.e),
+          fill: item.color,
+          stroke: "#fff",
+          "stroke-width": ".7",
+        }));
+      });
+
+      for (let h = 0; h < 24; h++) {
+        const a = (h / 24) * 360;
+        const p1 = polar(cx, cy, r - 2, a);
+        const p2 = polar(cx, cy, r + 13, a);
+        const label = polar(cx, cy, r + 28, a);
+        svg.appendChild(svgEl("line", {
+          x1: p1.x, y1: p1.y, x2: p2.x, y2: p2.y,
+          stroke: "#9ca3af", "stroke-width": 2, "stroke-linecap": "round"
+        }));
+        svg.appendChild(svgEl("text", {
+          x: label.x, y: label.y + 4, "text-anchor": "middle",
+          fill: "#334155", "font-size": compact ? 10 : 12,
+          "font-weight": 800,
+        }, String(h)));
+      }
+
+      if (!compact) {
+        normalized.forEach(item => {
+          const span = item.e - item.s;
+          if (span < 28) return;
+          const mid = (item.s + item.e) / 2;
+          const label = polar(cx, cy, r * 0.63, (mid / 1440) * 360);
+          const textDark = isLightColor(item.color);
+          const fill = textDark ? "#0f172a" : "#fff";
+          const stroke = textDark ? "rgba(255,255,255,.55)" : "rgba(0,0,0,.22)";
+          const name = svgEl("text", {
+            x: label.x, y: label.y - 5, "text-anchor": "middle",
+            fill, "font-size": 13, "font-weight": 950,
+            style: `paint-order:stroke;stroke:${stroke};stroke-width:3px;`,
+          }, item.category);
+          const dur = svgEl("text", {
+            x: label.x, y: label.y + 13, "text-anchor": "middle",
+            fill, "font-size": 10, "font-weight": 900,
+            style: `paint-order:stroke;stroke:${stroke};stroke-width:2px;`,
+          }, durationText(span));
+          svg.appendChild(name);
+          svg.appendChild(dur);
+        });
+      }
+
+      svg.appendChild(svgEl("circle", { cx, cy, r: 2.5, fill: "#334155", opacity: .65 }));
+    }
+
+    function makeMiniClock(items) {
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svg.setAttribute("viewBox", "0 0 360 360");
+      svg.setAttribute("class", "mini-clock");
+      renderClock(svg, items, true);
+      return svg;
+    }
+
+    function renderToday() {
+      $("planTitle").value = state.planTitle;
+      $("planDate").value = state.date;
+      renderClock($("clockSvg"), state.items);
+
+      const total = planTotal(state.items);
+      const remaining = 1440 - total;
+      const overlap = hasOverlap(state.items);
+
+      $("totalText").textContent = durationText(total);
+      $("remainingText").textContent = durationText(Math.abs(remaining));
+
+      const status = $("statusText");
+      status.className = "stat-value";
+      if (total === 1440 && !overlap) {
+        status.textContent = "完成";
+        status.classList.add("status-ok");
+      } else if (overlap) {
+        status.textContent = "重複あり";
+        status.classList.add("status-danger");
+      } else {
+        status.textContent = "調整中";
+        status.classList.add("status-warn");
+      }
+      $("overlapWarn").style.display = overlap ? "block" : "none";
+
+      const list = $("planList");
+      list.innerHTML = "";
+      const items = normalizeItems(state.items);
+      if (!items.length) {
+        list.innerHTML = `<div class="empty">まだ予定がありません。テンプレートか追加ボタンから作成できます。</div>`;
+      }
+      items.forEach(item => {
+        const cat = getCat(item.category);
+        const div = document.createElement("div");
+        div.className = "plan-item";
+        div.innerHTML = `
+          <div class="plan-top">
+            <span class="dot" style="background:${cat.color}"></span>
+            <div class="plan-main">
+              <div class="plan-name">${escapeHtml(item.category)}</div>
+              <div class="plan-time">${displayTime(item.start)}〜${displayTime(item.end)} / ${durationText(item.e - item.s)}</div>
+            </div>
+          </div>
+          <div class="item-actions">
+            <button class="btn btn-small btn-primary" data-edit="${item.id}">編集</button>
+            <button class="btn btn-small btn-outline" data-delete="${item.id}">削除</button>
+          </div>
+        `;
+        list.appendChild(div);
+      });
+
+      list.querySelectorAll("[data-edit]").forEach(btn => {
+        btn.addEventListener("click", () => openEdit(btn.dataset.edit));
+      });
+      list.querySelectorAll("[data-delete]").forEach(btn => {
+        btn.addEventListener("click", () => deleteItem(btn.dataset.delete));
+      });
+
+      const clearBtn = $("clearAllBtn");
+      clearBtn.textContent = state.clearArmed ? "もう一度で削除" : "全削除";
+      clearBtn.className = state.clearArmed ? "btn btn-small btn-danger" : "btn btn-small btn-muted";
+    }
+
+    function renderCategories() {
+      const wrap = $("categoryButtons");
+      wrap.innerHTML = "";
+      state.categories.slice(0, 12).forEach(cat => {
+        const btn = document.createElement("button");
+        btn.className = "cat-btn";
+        if (cat.name === state.form.category) btn.classList.add("selected");
+        btn.textContent = cat.name;
+        btn.style.background = cat.color;
+        btn.style.color = isLightColor(cat.color) ? "#0f172a" : "#fff";
+        btn.addEventListener("click", () => {
+          state.form.category = cat.name;
+          state.form.color = cat.color;
+          render();
+        });
+        wrap.appendChild(btn);
+      });
+    }
+
+    function renderTemplates() {
+      const list = $("templateList");
+      list.innerHTML = "";
+      if (!state.templates.length) {
+        list.innerHTML = `<div class="empty">テンプレートはまだありません。</div>`;
+      }
+      state.templates.forEach(template => {
+        const card = document.createElement("div");
+        card.className = "template-card";
+        const mini = makeMiniClock(template.items);
+        card.innerHTML = `
+          <div class="row-with-mini">
+            <div class="mini-holder"></div>
+            <div>
+              <p class="card-title">${escapeHtml(template.name)}</p>
+              <p class="card-sub">${escapeHtml(template.memo || "メモなし")}</p>
+              <div class="card-total">合計 ${durationText(planTotal(template.items))}</div>
+            </div>
+          </div>
+          <div class="grid-2" style="margin-top:12px;">
+            <button class="btn btn-small btn-primary" data-apply="${template.id}">反映する</button>
+            <button class="btn btn-small btn-outline" data-template-edit="${template.id}">編集</button>
+          </div>
+        `;
+        card.querySelector(".mini-holder").appendChild(mini);
+        list.appendChild(card);
+      });
+      list.querySelectorAll("[data-apply]").forEach(btn => {
+        btn.addEventListener("click", () => applyTemplate(btn.dataset.apply));
+      });
+      list.querySelectorAll("[data-template-edit]").forEach(btn => {
+        btn.addEventListener("click", () => openTemplateEdit(btn.dataset.templateEdit));
+      });
+    }
+
+    function renderTemplateEdit() {
+      const template = state.templates.find(t => t.id === state.editingTemplateId);
+      if (!template) return;
+      $("templateNameInput").value = template.name;
+      $("templateMemoInput").value = template.memo || "";
+      const holder = $("templateEditMini");
+      holder.innerHTML = "";
+      holder.appendChild(makeMiniClock(template.items));
+    }
+
+    function renderHistory() {
+      const list = $("historyList");
+      list.innerHTML = "";
+      if (!state.history.length) {
+        list.innerHTML = `<div class="empty">履歴はまだありません。「履歴保存」で残せます。</div>`;
+      }
+      state.history.forEach(record => {
+        const card = document.createElement("div");
+        card.className = "history-card";
+        card.innerHTML = `
+          <div class="row-with-mini">
+            <div class="mini-holder"></div>
+            <div>
+              <p class="card-title">${escapeHtml(record.title)}</p>
+              <p class="card-sub">${escapeHtml(record.date)}</p>
+              <div class="card-total">合計 ${durationText(planTotal(record.items))}</div>
+            </div>
+          </div>
+          <div class="grid-2" style="margin-top:12px;">
+            <button class="btn btn-small btn-primary" data-load-history="${record.id}">読み込む</button>
+            <button class="btn btn-small btn-outline" data-delete-history="${record.id}" style="color:#e11d48;border-color:#fecdd3;">削除</button>
+          </div>
+        `;
+        card.querySelector(".mini-holder").appendChild(makeMiniClock(record.items));
+        list.appendChild(card);
+      });
+      list.querySelectorAll("[data-load-history]").forEach(btn => {
+        btn.addEventListener("click", () => loadHistory(btn.dataset.loadHistory));
+      });
+      list.querySelectorAll("[data-delete-history]").forEach(btn => {
+        btn.addEventListener("click", () => deleteHistory(btn.dataset.deleteHistory));
+      });
+    }
+
+    function render() {
+      if (state.screen === "today") renderToday();
+      if (state.screen === "edit") {
+        updateFormFromState();
+        renderCategories();
+      }
+      if (state.screen === "template") renderTemplates();
+      if (state.screen === "templateEdit") renderTemplateEdit();
+      if (state.screen === "history") renderHistory();
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function bindEvents() {
+      $("backBtn").addEventListener("click", () => {
+        if (state.screen === "templateEdit") switchScreen("template");
+        else switchScreen("today");
+      });
+      $("menuBtn").addEventListener("click", () => switchScreen("template"));
+
+      $("planTitle").addEventListener("input", (e) => {
+        state.planTitle = e.target.value;
+        save();
+      });
+      $("planDate").addEventListener("input", (e) => {
+        state.date = e.target.value;
+        save();
+      });
+
+      $("addPlanBtn").addEventListener("click", openAdd);
+      $("imageSaveBtn").addEventListener("click", downloadSvg);
+      $("historySaveBtn").addEventListener("click", saveHistory);
+      $("templateSaveBtn").addEventListener("click", saveTemplate);
+      $("templateSaveTopBtn").addEventListener("click", saveTemplate);
+      $("clearAllBtn").addEventListener("click", clearAll);
+
+      $("rangeModeBtn").addEventListener("click", () => {
+        state.inputMode = "range";
+        render();
+      });
+      $("durationModeBtn").addEventListener("click", () => {
+        state.inputMode = "duration";
+        render();
+      });
+
+      $("newModeBtn").addEventListener("click", openAdd);
+      $("cancelEditBtn").addEventListener("click", () => switchScreen("today"));
+      $("submitItemBtn").addEventListener("click", submitItem);
+
+      $("categoryInput").addEventListener("input", (e) => {
+        state.form.category = e.target.value;
+        render();
+      });
+      $("categoryColor").addEventListener("input", (e) => {
+        state.form.color = e.target.value;
+        const name = state.form.category.trim();
+        const cat = state.categories.find(c => c.name === name);
+        if (cat) {
+          cat.color = e.target.value;
+          save();
         }
         render();
-        return;
-      }
-      if (target.dataset.cat) {
-        state.category = target.dataset.cat;
-        render();
-        return;
-      }
-      if (target.dataset.deleteItem) {
-        state.items = state.items.filter(item => item.id !== target.dataset.deleteItem);
-        state.clearArmed = false;
-        render();
-        return;
-      }
-      if (target.dataset.applyTemplate) {
-        const template = state.templates.find(t => t.id === target.dataset.applyTemplate);
-        if (template) {
-          state.items = copyItems(template.items);
-          state.planTitle = template.name;
-          state.clearArmed = false;
-          setScreen("today");
-          showToast(`${template.name}を反映しました`);
-        }
-        return;
-      }
-      if (target.dataset.editTemplate) {
-        state.editingTemplateId = target.dataset.editTemplate;
-        setScreen("templateEdit");
-        return;
-      }
-      if (target.dataset.loadHistory) {
-        const record = state.history.find(r => r.id === target.dataset.loadHistory);
-        if (record) {
-          state.date = record.date;
-          state.planTitle = record.title;
-          state.items = copyItems(record.items);
-          setScreen("today");
-          showToast("履歴から読み込みました");
-        }
-        return;
-      }
-      if (target.dataset.deleteHistory) {
-        state.history = state.history.filter(r => r.id !== target.dataset.deleteHistory);
-        showToast("履歴を削除しました");
-        render();
-        return;
-      }
-      if (target.id === "saveTemplateInfoBtn") {
-        const template = state.templates.find(t => t.id === state.editingTemplateId);
-        if (!template) return;
-        const name = $("templateNameInput").value.trim();
-        if (!name) return showToast("テンプレート名を入力してね");
-        template.name = name;
-        template.memo = $("templateMemoInput").value.trim() || "メモなし";
-        showToast("テンプレート名を更新しました");
-        render();
-        return;
-      }
-      if (target.id === "loadTemplateForEditBtn") {
-        const template = state.templates.find(t => t.id === state.editingTemplateId);
-        if (!template) return;
-        state.items = copyItems(template.items);
-        state.planTitle = template.name;
-        setScreen("today");
-        showToast("編集用に今日の予定へ読み込みました");
-        return;
-      }
-      if (target.id === "overwriteTemplateBtn") {
-        const template = state.templates.find(t => t.id === state.editingTemplateId);
-        if (!template) return;
-        template.items = copyItems(state.items);
-        showToast("今日の予定で上書きしました");
-        render();
-        return;
-      }
-      if (target.id === "deleteTemplateBtn") {
-        state.templates = state.templates.filter(t => t.id !== state.editingTemplateId);
-        state.editingTemplateId = null;
-        setScreen("template");
-        showToast("テンプレートを削除しました");
-        return;
-      }
-    });
+      });
 
-    $("planTitle").addEventListener("input", e => { state.planTitle = e.target.value; saveState(); });
-    $("planDate").addEventListener("input", e => { state.date = e.target.value; saveState(); });
-    $("categoryInput").addEventListener("input", e => { state.category = e.target.value; renderAdd(); saveState(); });
-    $("categoryColor").addEventListener("input", e => { updateCategoryColor(state.category, e.target.value); renderAdd(); saveState(); });
+      $("startHour").addEventListener("change", (e) => {
+        const h = Number(e.target.value);
+        const m = getMinute(state.form.startMin);
+        state.form.startMin = h * 60 + m;
+        render();
+      });
+      $("startMinute").addEventListener("change", (e) => {
+        const h = getHour(state.form.startMin);
+        state.form.startMin = h * 60 + Number(e.target.value);
+        render();
+      });
+      $("endHour").addEventListener("change", (e) => {
+        const h = Number(e.target.value);
+        const m = getMinute(state.form.endMin);
+        state.form.endMin = h === 24 ? 1440 : h * 60 + m;
+        render();
+      });
+      $("endMinute").addEventListener("change", (e) => {
+        const h = getHour(state.form.endMin);
+        state.form.endMin = h === 24 ? 1440 : h * 60 + Number(e.target.value);
+        render();
+      });
+      $("durationHour").addEventListener("input", (e) => {
+        state.form.durationHour = Number(e.target.value || 0);
+        updatePreview();
+      });
+      $("durationMinute").addEventListener("change", (e) => {
+        state.form.durationMinute = Number(e.target.value);
+        updatePreview();
+      });
 
-    $("uploadBackupInput").addEventListener("change", event => {
-      const file = event.target.files?.[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = () => {
-        try {
-          const data = JSON.parse(String(reader.result));
-          state.date = data.date || todayText();
-          state.planTitle = data.planTitle || "今日の予定";
-          state.items = copyItems(data.items || []);
-          state.templates = data.templates || deepClone(DEFAULT_TEMPLATES);
-          state.categories = data.categories || deepClone(BASE_CATEGORIES);
-          state.history = data.history || [];
-          setScreen("today");
-          showToast("バックアップを読み込みました");
-        } catch {
-          showToast("読み込みに失敗しました");
-        }
-      };
-      reader.readAsText(file);
-      event.target.value = "";
-    });
+      $("saveTemplateInfoBtn").addEventListener("click", saveTemplateInfo);
+      $("loadTemplateForEditBtn").addEventListener("click", loadTemplateForEdit);
+      $("overwriteTemplateBtn").addEventListener("click", overwriteTemplate);
+      $("deleteTemplateBtn").addEventListener("click", deleteTemplate);
 
+      $("downloadBackupBtn").addEventListener("click", downloadBackup);
+      $("uploadBackupInput").addEventListener("change", (e) => uploadBackup(e.target.files[0]));
+      $("resetAppBtn").addEventListener("click", resetApp);
+
+      document.querySelectorAll(".nav-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const target = btn.dataset.screen;
+          if (target === "today") switchScreen("today");
+          if (target === "edit-add") openAdd();
+          if (target === "template") switchScreen("template");
+          if (target === "history") switchScreen("history");
+          if (target === "settings") switchScreen("settings");
+        });
+      });
+    }
+
+    load();
+    bindEvents();
     render();
   </script>
 </body>
