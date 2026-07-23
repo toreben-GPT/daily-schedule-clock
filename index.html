@@ -227,6 +227,22 @@
       display: flex;
     }
 
+    .version-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 68px;
+      min-height: 44px;
+      margin-top: 10px;
+      padding: 8px 16px;
+      border-radius: 999px;
+      background: var(--navy);
+      color: #fff;
+      font-size: 18px;
+      font-weight: 950;
+      letter-spacing: .02em;
+    }
+
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 
@@ -665,34 +681,6 @@
             <input id="planDate" class="field" type="date" />
           </div>
 
-          <div class="card bulk-card">
-            <div class="screen-title">
-              <h2>まとめて入力</h2>
-              <p>例：9時から12時まで仕事、12時から13時まで昼休み</p>
-            </div>
-            <div style="height:12px;"></div>
-            <textarea id="bulkInput" class="field bulk-input" rows="4" placeholder="9時から12時まで 仕事&#10;12時から13時まで 昼休み&#10;13時から18時まで 仕事"></textarea>
-            <div class="bulk-actions" style="margin-top:10px;">
-              <button class="btn btn-primary" id="bulkPreviewBtn">内容を確認</button>
-              <button class="btn btn-outline" id="chatGptBtn">ChatGPTで整える</button>
-            </div>
-            <div id="bulkHelp" class="hint">簡単な文章はこのまま変換できます。うまくいかない時だけChatGPTを使えます。</div>
-            <div id="bulkResult" class="bulk-preview" aria-live="polite"></div>
-            <div id="bulkApplyArea" style="display:none;margin-top:12px;">
-              <div class="choice-row">
-                <label class="choice">
-                  <input type="radio" name="bulkMode" value="replace" checked />
-                  <span><strong>今日の予定と入れ替える</strong><br>今の予定は反映直後なら元に戻せます</span>
-                </label>
-                <label class="choice">
-                  <input type="radio" name="bulkMode" value="append" />
-                  <span><strong>今の予定に追加する</strong><br>重なりは反映後に確認できます</span>
-                </label>
-              </div>
-              <button class="btn btn-blue" id="bulkApplyBtn" style="width:100%;margin-top:10px;">この内容を反映</button>
-            </div>
-          </div>
-
           <div class="undo-bar" id="undoBar">
             <span id="undoMessage">変更しました</span>
             <button class="btn btn-small btn-outline" id="undoBtn">元に戻す</button>
@@ -736,7 +724,12 @@
 
       <section id="screenEdit" class="screen">
         <div class="stack">
-          <div class="card">
+          <div id="addMethodArea" class="segmented">
+            <button class="btn-tab active" id="singleAddModeBtn">1件ずつ入力</button>
+            <button class="btn-tab" id="bulkAddModeBtn">まとめて入力</button>
+          </div>
+
+          <div class="card" id="singleAddPanel">
             <div class="section-head">
               <div class="screen-title">
                 <h2 id="editTitle">予定を追加</h2>
@@ -808,6 +801,34 @@
               <button class="btn btn-outline" id="cancelEditBtn" style="display:none;">キャンセル</button>
             </div>
           </div>
+
+          <div class="card bulk-card" id="bulkAddPanel" style="display:none;">
+            <div class="screen-title">
+              <h2>まとめて入力</h2>
+              <p>例：9時から12時まで仕事、12時から13時まで昼休み</p>
+            </div>
+            <div style="height:12px;"></div>
+            <textarea id="bulkInput" class="field bulk-input" rows="4" placeholder="9時から12時まで 仕事&#10;12時から13時まで 昼休み&#10;13時から18時まで 仕事"></textarea>
+            <div class="bulk-actions" style="margin-top:10px;">
+              <button class="btn btn-primary" id="bulkPreviewBtn">内容を確認</button>
+              <button class="btn btn-outline" id="chatGptBtn">ChatGPTで整える</button>
+            </div>
+            <div id="bulkHelp" class="hint">簡単な文章はこのまま変換できます。うまくいかない時だけChatGPTを使えます。</div>
+            <div id="bulkResult" class="bulk-preview" aria-live="polite"></div>
+            <div id="bulkApplyArea" style="display:none;margin-top:12px;">
+              <div class="choice-row">
+                <label class="choice">
+                  <input type="radio" name="bulkMode" value="replace" checked />
+                  <span><strong>今日の予定と入れ替える</strong><br>今の予定は反映直後なら元に戻せます</span>
+                </label>
+                <label class="choice">
+                  <input type="radio" name="bulkMode" value="append" />
+                  <span><strong>今の予定に追加する</strong><br>重なりは反映後に確認できます</span>
+                </label>
+              </div>
+              <button class="btn btn-blue" id="bulkApplyBtn" style="width:100%;margin-top:10px;">この内容を反映</button>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -874,7 +895,13 @@
         <div class="stack">
           <div class="screen-title">
             <h2>設定</h2>
-            <p>データ保存とバックアップ</p>
+            <p>バージョン・データ保存・バックアップ</p>
+          </div>
+
+          <div class="card">
+            <h3 style="margin:0;font-size:18px;font-weight:950;">アプリのバージョン</h3>
+            <div class="version-badge" id="appVersion">v1</div>
+            <p class="card-sub">現在利用中のスケジュールアプリです。</p>
           </div>
 
           <div class="card">
@@ -914,6 +941,7 @@
   </div>
 
   <script>
+    const APP_VERSION = "v1";
     const STORAGE_KEY = "daily_schedule_clock_app_v2_html";
     const OLD_KEYS = ["daily_schedule_clock_app_v2", "daily_schedule_clock_app_v1_final"];
 
@@ -999,6 +1027,7 @@
       categories: baseCategories,
       history: [],
       screen: "today",
+      addMethod: "single",
       inputMode: "range",
       editingItemId: null,
       editingOriginal: null,
@@ -1217,6 +1246,12 @@
     }
 
     function updateFormFromState() {
+      const isEditing = Boolean(state.editingItemId);
+      $("addMethodArea").style.display = isEditing ? "none" : "grid";
+      $("singleAddPanel").style.display = isEditing || state.addMethod === "single" ? "block" : "none";
+      $("bulkAddPanel").style.display = !isEditing && state.addMethod === "bulk" ? "block" : "none";
+      $("singleAddModeBtn").classList.toggle("active", state.addMethod === "single");
+      $("bulkAddModeBtn").classList.toggle("active", state.addMethod === "bulk");
       $("editTitle").textContent = state.editingItemId ? "予定を編集" : "予定を追加";
       $("newModeBtn").style.display = state.editingItemId ? "block" : "none";
       $("cancelEditBtn").style.display = state.editingItemId ? "block" : "none";
@@ -1251,6 +1286,7 @@
     function openAdd() {
       state.editingItemId = null;
       state.editingOriginal = null;
+      state.addMethod = "single";
       state.inputMode = "range";
       state.form = {
         category: "仕事",
@@ -1261,6 +1297,12 @@
         durationMinute: 0,
       };
       switchScreen("edit");
+    }
+
+    function setAddMethod(method) {
+      if (state.editingItemId) return;
+      state.addMethod = method === "bulk" ? "bulk" : "single";
+      render();
     }
 
     function openEdit(id) {
@@ -1523,7 +1565,7 @@
       $("bulkApplyArea").style.display = "none";
       $("bulkResult").innerHTML = "";
       save();
-      render();
+      switchScreen("today");
       showToast(`${newItems.length}件を反映しました`);
     }
 
@@ -2040,6 +2082,7 @@ ${source}`;
       if (state.screen === "template") renderTemplates();
       if (state.screen === "templateEdit") renderTemplateEdit();
       if (state.screen === "history") renderHistory();
+      if (state.screen === "settings") $("appVersion").textContent = APP_VERSION;
     }
 
     function escapeHtml(str) {
@@ -2068,6 +2111,8 @@ ${source}`;
       });
 
       $("addPlanBtn").addEventListener("click", openAdd);
+      $("singleAddModeBtn").addEventListener("click", () => setAddMethod("single"));
+      $("bulkAddModeBtn").addEventListener("click", () => setAddMethod("bulk"));
       $("bulkPreviewBtn").addEventListener("click", previewBulkInput);
       $("bulkApplyBtn").addEventListener("click", applyBulkInput);
       $("chatGptBtn").addEventListener("click", openChatGptHelper);
