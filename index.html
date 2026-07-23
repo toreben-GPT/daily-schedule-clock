@@ -2,8 +2,8 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Daily Schedule Clock</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>スケジュールアプリ</title>
   <style>
     :root {
       --bg: #f1f5f9;
@@ -30,7 +30,7 @@
       font-weight: 700;
     }
 
-    button, input, select {
+    button, input, select, textarea {
       font: inherit;
     }
 
@@ -43,6 +43,7 @@
       width: 100%;
       max-width: 480px;
       min-height: 100vh;
+      min-height: 100svh;
       margin: 0 auto;
       background: #fff;
       box-shadow: 0 0 40px rgba(15, 23, 42, .10);
@@ -109,6 +110,7 @@
 
     .field {
       width: 100%;
+      min-width: 0;
       border: 1px solid var(--line);
       background: var(--soft);
       color: var(--ink);
@@ -122,6 +124,107 @@
     .field:focus {
       border-color: #94a3b8;
       box-shadow: 0 0 0 4px rgba(148, 163, 184, .16);
+    }
+
+    input[type="date"].field {
+      width: 100%;
+      max-width: 100%;
+    }
+
+    @supports (width: -webkit-fill-available) {
+      input[type="date"].field {
+        width: -webkit-fill-available;
+      }
+    }
+
+    .bulk-card {
+      border-color: #bfdbfe;
+      background: linear-gradient(155deg, #eff6ff 0%, #ffffff 64%);
+    }
+
+    .bulk-input {
+      min-height: 132px;
+      resize: vertical;
+      line-height: 1.65;
+      font-weight: 800;
+    }
+
+    .bulk-actions,
+    .shift-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .bulk-preview {
+      display: grid;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .bulk-preview-item {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 10px;
+      align-items: center;
+      min-width: 0;
+      padding: 11px 12px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: #fff;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .bulk-error {
+      color: #be123c;
+      background: #fff1f2;
+      border-radius: 16px;
+      padding: 11px 12px;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .choice-row {
+      display: grid;
+      gap: 8px;
+    }
+
+    .choice {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      min-height: 44px;
+      padding: 11px 12px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: #fff;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .choice input {
+      width: 20px;
+      height: 20px;
+      margin: 1px 0 0;
+      flex: 0 0 auto;
+    }
+
+    .undo-bar {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 18px;
+      background: #ecfdf5;
+      color: #047857;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .undo-bar.active {
+      display: flex;
     }
 
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -307,6 +410,14 @@
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 8px;
+    }
+
+    .shift-actions {
+      margin-top: 8px;
+    }
+
+    .shift-actions .btn {
+      min-height: 44px;
     }
 
     .note {
@@ -538,8 +649,8 @@
     <header class="header">
       <button class="icon-btn" id="backBtn" aria-label="戻る">‹</button>
       <div class="header-title">
-        <h1>1日の予定</h1>
-        <p>24時間を円グラフで可視化</p>
+        <h1>スケジュールアプリ</h1>
+        <p>話すように、まとめて予定入力</p>
       </div>
       <button class="icon-btn" id="menuBtn" aria-label="テンプレート">≡</button>
     </header>
@@ -552,6 +663,39 @@
           <div class="stack" style="gap:10px;">
             <input id="planTitle" class="field" placeholder="予定名" />
             <input id="planDate" class="field" type="date" />
+          </div>
+
+          <div class="card bulk-card">
+            <div class="screen-title">
+              <h2>まとめて入力</h2>
+              <p>例：9時から12時まで仕事、12時から13時まで昼休み</p>
+            </div>
+            <div style="height:12px;"></div>
+            <textarea id="bulkInput" class="field bulk-input" rows="4" placeholder="9時から12時まで 仕事&#10;12時から13時まで 昼休み&#10;13時から18時まで 仕事"></textarea>
+            <div class="bulk-actions" style="margin-top:10px;">
+              <button class="btn btn-primary" id="bulkPreviewBtn">内容を確認</button>
+              <button class="btn btn-outline" id="chatGptBtn">ChatGPTで整える</button>
+            </div>
+            <div id="bulkHelp" class="hint">簡単な文章はこのまま変換できます。うまくいかない時だけChatGPTを使えます。</div>
+            <div id="bulkResult" class="bulk-preview" aria-live="polite"></div>
+            <div id="bulkApplyArea" style="display:none;margin-top:12px;">
+              <div class="choice-row">
+                <label class="choice">
+                  <input type="radio" name="bulkMode" value="replace" checked />
+                  <span><strong>今日の予定と入れ替える</strong><br>今の予定は反映直後なら元に戻せます</span>
+                </label>
+                <label class="choice">
+                  <input type="radio" name="bulkMode" value="append" />
+                  <span><strong>今の予定に追加する</strong><br>重なりは反映後に確認できます</span>
+                </label>
+              </div>
+              <button class="btn btn-blue" id="bulkApplyBtn" style="width:100%;margin-top:10px;">この内容を反映</button>
+            </div>
+          </div>
+
+          <div class="undo-bar" id="undoBar">
+            <span id="undoMessage">変更しました</span>
+            <button class="btn btn-small btn-outline" id="undoBtn">元に戻す</button>
           </div>
 
           <div class="card chart-wrap">
@@ -646,6 +790,13 @@
               <div class="note">
                 <div style="color:#94a3b8;font-size:12px;">入力プレビュー</div>
                 <div id="previewText" style="margin-top:4px;color:#334155;font-weight:950;">--</div>
+              </div>
+
+              <div id="shiftFollowingArea" style="display:none;">
+                <label class="choice">
+                  <input id="shiftFollowingInput" type="checkbox" checked />
+                  <span><strong>これ以降の予定も自動でずらす</strong><br>変更後の終了時刻に合わせて、後ろの予定をまとめて移動します。</span>
+                </label>
               </div>
 
               <div>
@@ -850,8 +1001,13 @@
       screen: "today",
       inputMode: "range",
       editingItemId: null,
+      editingOriginal: null,
       editingTemplateId: null,
       clearArmed: false,
+      bulkPreview: [],
+      bulkErrors: [],
+      lastItemsBeforeChange: null,
+      lastChangeMessage: "",
       form: {
         category: "仕事",
         color: "#64748b",
@@ -1065,6 +1221,7 @@
       $("newModeBtn").style.display = state.editingItemId ? "block" : "none";
       $("cancelEditBtn").style.display = state.editingItemId ? "block" : "none";
       $("submitItemBtn").textContent = state.editingItemId ? "更新する" : "追加する";
+      $("shiftFollowingArea").style.display = state.editingItemId ? "block" : "none";
       $("categoryInput").value = state.form.category;
       const existing = state.categories.find(c => c.name === state.form.category.trim());
       $("categoryColor").value = existing ? existing.color : state.form.color;
@@ -1093,6 +1250,7 @@
 
     function openAdd() {
       state.editingItemId = null;
+      state.editingOriginal = null;
       state.inputMode = "range";
       state.form = {
         category: "仕事",
@@ -1112,6 +1270,7 @@
       const end = toMinutes(item.end);
       const duration = Math.max(0, end - start);
       state.editingItemId = id;
+      state.editingOriginal = { start, end };
       state.inputMode = "range";
       state.form = {
         category: item.category,
@@ -1130,6 +1289,56 @@
       if (!state.categories.some(cat => cat.name === clean)) {
         state.categories.push({ name: clean, color: color || hashColor(clean) });
       }
+    }
+
+    function rememberItems(message) {
+      state.lastItemsBeforeChange = state.items.map(item => ({ ...item }));
+      state.lastChangeMessage = message;
+    }
+
+    function undoLastItemsChange() {
+      if (!state.lastItemsBeforeChange) return;
+      state.items = state.lastItemsBeforeChange.map(item => ({ ...item }));
+      state.lastItemsBeforeChange = null;
+      state.lastChangeMessage = "";
+      save();
+      render();
+      showToast("変更を元に戻しました");
+    }
+
+    function shiftedItems(items, predicate, delta) {
+      const targets = items.filter(predicate);
+      if (!targets.length || delta === 0) return items.map(item => ({ ...item }));
+      const invalid = targets.some(item => {
+        const start = toMinutes(item.start) + delta;
+        const end = toMinutes(item.end) + delta;
+        return start < 0 || end > 1440;
+      });
+      if (invalid) return null;
+      return items.map(item => {
+        if (!predicate(item)) return { ...item };
+        return {
+          ...item,
+          start: toTime(toMinutes(item.start) + delta),
+          end: toTime(toMinutes(item.end) + delta),
+        };
+      });
+    }
+
+    function shiftFromItem(id, delta) {
+      const selected = state.items.find(item => item.id === id);
+      if (!selected) return;
+      const selectedStart = toMinutes(selected.start);
+      const moved = shiftedItems(state.items, item => toMinutes(item.start) >= selectedStart, delta);
+      if (!moved) {
+        showToast(delta < 0 ? "0:00より前には移動できません" : "24:00を超えるため移動できません");
+        return;
+      }
+      rememberItems("予定をまとめて移動しました");
+      state.items = moved;
+      save();
+      render();
+      showToast(`${delta > 0 ? "＋" : "−"}${Math.abs(delta)}分ずらしました`);
     }
 
     function submitItem() {
@@ -1173,16 +1382,185 @@
       };
 
       if (state.editingItemId) {
-        state.items = state.items.map(x => x.id === state.editingItemId ? item : x);
-        showToast("予定を更新しました");
+        const original = state.editingOriginal;
+        let nextItems = state.items.map(x => x.id === state.editingItemId ? item : { ...x });
+        const shouldShift = $("shiftFollowingInput").checked && original;
+        const delta = original ? end - original.end : 0;
+        if (shouldShift && delta !== 0) {
+          nextItems = shiftedItems(
+            nextItems,
+            x => x.id !== state.editingItemId && toMinutes(x.start) >= original.end,
+            delta
+          );
+          if (!nextItems) {
+            showToast("後ろの予定が24時間の範囲を超えます");
+            return;
+          }
+        }
+        rememberItems(shouldShift && delta !== 0 ? "後ろの予定もまとめて更新しました" : "予定を更新しました");
+        state.items = nextItems;
+        showToast(shouldShift && delta !== 0 ? "これ以降もまとめて更新しました" : "予定を更新しました");
       } else {
         state.items.push(item);
         showToast("予定を追加しました");
       }
 
       state.editingItemId = null;
+      state.editingOriginal = null;
       save();
       switchScreen("today");
+    }
+
+    function normalizeNaturalText(value) {
+      return String(value || "")
+        .normalize("NFKC")
+        .replace(/[，、；;]/g, "\n")
+        .replace(/[。]+/g, "\n")
+        .replace(/\r/g, "");
+    }
+
+    function parseNaturalTime(value) {
+      const clean = String(value || "").replace(/\s/g, "");
+      const period = clean.includes("午後") ? "pm" : clean.includes("午前") ? "am" : "";
+      const match = clean.match(/(\d{1,2})(?:[:時](\d{1,2}))?分?/);
+      if (!match) return null;
+      let hour = Number(match[1]);
+      const minute = Number(match[2] || 0);
+      if (minute > 59 || hour > 24 || (hour === 24 && minute !== 0)) return null;
+      if (period === "pm" && hour < 12) hour += 12;
+      if (period === "am" && hour === 12) hour = 0;
+      return hour * 60 + minute;
+    }
+
+    function cleanNaturalCategory(value) {
+      return String(value || "")
+        .replace(/^[\s:：\-〜~]+/, "")
+        .replace(/[\s。]+$/, "")
+        .replace(/^(予定は|予定|は)\s*/, "")
+        .trim();
+    }
+
+    function parseScheduleSegment(segment) {
+      const time = "(?:午前|午後)?\\s*\\d{1,2}(?::\\s*\\d{1,2}|時(?:\\s*\\d{1,2}\\s*分?)?)?";
+      const rangeFirst = new RegExp(`^\\s*(${time})\\s*(?:から|[-~〜－—])\\s*(${time})\\s*(?:まで)?\\s*(.+?)\\s*$`);
+      const categoryFirst = new RegExp(`^\\s*(.+?)\\s+(${time})\\s*(?:から|[-~〜－—])\\s*(${time})\\s*(?:まで)?\\s*$`);
+      let match = segment.match(rangeFirst);
+      let category;
+      let start;
+      let end;
+      if (match) {
+        start = parseNaturalTime(match[1]);
+        end = parseNaturalTime(match[2]);
+        category = cleanNaturalCategory(match[3]);
+      } else {
+        match = segment.match(categoryFirst);
+        if (!match) return null;
+        category = cleanNaturalCategory(match[1]);
+        start = parseNaturalTime(match[2]);
+        end = parseNaturalTime(match[3]);
+      }
+      if (end === 0 && start > 0) end = 1440;
+      if (!category || start === null || end === null || start >= end || end > 1440) return null;
+      return { id: makeId(), category, start: toTime(start), end: toTime(end) };
+    }
+
+    function parseScheduleText(text) {
+      const segments = normalizeNaturalText(text)
+        .split(/\n+/)
+        .map(line => line.replace(/^\s*(?:[・●■]\s*|\d+[.)）]\s*)/, "").trim())
+        .filter(Boolean);
+      const items = [];
+      const errors = [];
+      segments.forEach(segment => {
+        const parsed = parseScheduleSegment(segment);
+        if (parsed) items.push(parsed);
+        else errors.push(`読み取れませんでした：${segment}`);
+      });
+      return { items: normalizeItems(items).map(({ s, e, ...item }) => item), errors };
+    }
+
+    function renderBulkPreview() {
+      const result = $("bulkResult");
+      result.innerHTML = "";
+      state.bulkPreview.forEach(item => {
+        const row = document.createElement("div");
+        row.className = "bulk-preview-item";
+        row.innerHTML = `
+          <span class="dot" style="background:${getCat(item.category).color}"></span>
+          <span><strong>${escapeHtml(item.category)}</strong><br>${displayTime(item.start)}〜${displayTime(item.end)}</span>
+        `;
+        result.appendChild(row);
+      });
+      state.bulkErrors.forEach(message => {
+        const error = document.createElement("div");
+        error.className = "bulk-error";
+        error.textContent = message;
+        result.appendChild(error);
+      });
+      $("bulkApplyArea").style.display = state.bulkPreview.length && !state.bulkErrors.length ? "block" : "none";
+    }
+
+    function previewBulkInput() {
+      const parsed = parseScheduleText($("bulkInput").value);
+      state.bulkPreview = parsed.items;
+      state.bulkErrors = parsed.errors;
+      renderBulkPreview();
+      if (!parsed.items.length) showToast("時刻と予定名を読み取れませんでした");
+      else if (parsed.errors.length) showToast("読み取れない行を直してください");
+      else showToast(`${parsed.items.length}件を確認してください`);
+    }
+
+    function applyBulkInput() {
+      if (!state.bulkPreview.length || state.bulkErrors.length) return;
+      const mode = document.querySelector('input[name="bulkMode"]:checked')?.value || "replace";
+      rememberItems(mode === "replace" ? "まとめて予定を入れ替えました" : "まとめて予定を追加しました");
+      const newItems = state.bulkPreview.map(item => ({ ...item, id: makeId() }));
+      newItems.forEach(item => addCategoryIfNeeded(item.category, hashColor(item.category)));
+      state.items = mode === "append" ? [...state.items, ...newItems] : newItems;
+      state.bulkPreview = [];
+      state.bulkErrors = [];
+      $("bulkInput").value = "";
+      $("bulkApplyArea").style.display = "none";
+      $("bulkResult").innerHTML = "";
+      save();
+      render();
+      showToast(`${newItems.length}件を反映しました`);
+    }
+
+    function buildChatGptPrompt() {
+      const source = $("bulkInput").value.trim() || "ここに今日の予定を書く";
+      return `次の自然文を1日の予定表に整えてください。
+出力は予定1件につき1行、必ず「HH:MM-HH:MM 予定名」の形式だけにしてください。
+説明、番号、記号、Markdownは付けないでください。
+終了時刻が不明な予定は、文脈から自然な時刻を補ってください。
+1日の範囲は00:00から24:00です。
+
+入力:
+${source}`;
+    }
+
+    async function copyText(text) {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+        return;
+      }
+      const input = $("bulkInput");
+      const before = input.value;
+      input.value = text;
+      input.select();
+      document.execCommand("copy");
+      input.value = before;
+    }
+
+    async function openChatGptHelper() {
+      const chatWindow = window.open("https://chatgpt.com/", "_blank", "noopener");
+      try {
+        await copyText(buildChatGptPrompt());
+        showToast("依頼文をコピーしました。ChatGPTに貼り付けてください");
+      } catch (_) {
+        if (chatWindow) chatWindow.close();
+        showToast("コピーできませんでした。文章を選択してコピーしてください");
+      }
     }
 
     function deleteItem(id) {
@@ -1485,6 +1863,8 @@
     function renderToday() {
       $("planTitle").value = state.planTitle;
       $("planDate").value = state.date;
+      $("undoBar").classList.toggle("active", Boolean(state.lastItemsBeforeChange));
+      $("undoMessage").textContent = state.lastChangeMessage || "変更しました";
       renderClock($("clockSvg"), state.items);
 
       const total = planTotal(state.items);
@@ -1530,6 +1910,10 @@
             <button class="btn btn-small btn-primary" data-edit="${item.id}">編集</button>
             <button class="btn btn-small btn-outline" data-delete="${item.id}">削除</button>
           </div>
+          <div class="shift-actions">
+            <button class="btn btn-small btn-outline" data-shift="-10" data-shift-id="${item.id}">以降 −10分</button>
+            <button class="btn btn-small btn-outline" data-shift="10" data-shift-id="${item.id}">以降 ＋10分</button>
+          </div>
         `;
         list.appendChild(div);
       });
@@ -1539,6 +1923,9 @@
       });
       list.querySelectorAll("[data-delete]").forEach(btn => {
         btn.addEventListener("click", () => deleteItem(btn.dataset.delete));
+      });
+      list.querySelectorAll("[data-shift]").forEach(btn => {
+        btn.addEventListener("click", () => shiftFromItem(btn.dataset.shiftId, Number(btn.dataset.shift)));
       });
 
       const clearBtn = $("clearAllBtn");
@@ -1681,6 +2068,10 @@
       });
 
       $("addPlanBtn").addEventListener("click", openAdd);
+      $("bulkPreviewBtn").addEventListener("click", previewBulkInput);
+      $("bulkApplyBtn").addEventListener("click", applyBulkInput);
+      $("chatGptBtn").addEventListener("click", openChatGptHelper);
+      $("undoBtn").addEventListener("click", undoLastItemsChange);
       $("imageSaveBtn").addEventListener("click", downloadSvg);
       $("historySaveBtn").addEventListener("click", saveHistory);
       $("templateSaveBtn").addEventListener("click", saveTemplate);
